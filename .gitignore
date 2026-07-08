@@ -1,0 +1,14 @@
+# 개발용 백업·산출물 (배포/공개 제외)
+*.bak_*
+*.zip
+_dist/
+.claude/
+
+# 개인 파일 — 학생·학교 관련 문서는 절대 올리지 않기
+*.pdf
+*.hwp
+*.hwpx
+*.xlsx
+*.csv
+*.json
+!package.json
