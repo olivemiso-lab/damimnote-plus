@@ -239,6 +239,40 @@ DN.Assessment = (function () {
     if (x < 545) return 'level'; return 'period';
   }
 
+  // HWP 계열 PDF는 글자를 1~2자씩 조각내 저장함 → 같은 줄에서 간격이 좁은 조각을
+  // 한 덩어리로 합친다. (무조건 공백으로 잇던 방식은 "인터넷" → "인 터 넷"이 되고,
+  // 왼쪽 좌표만으로 열을 정하면 단어 첫 글자가 옆 칸으로 잘려나가는 버그가 있었음)
+  const FRAG_GAP = 1.2;   // 이보다 넓으면 진짜 띄어쓰기(실측: 글자내부 ≤1.1pt, 공백 ≥1.6pt)
+  const LINE_TOL = 3;     // 같은 줄로 볼 y 오차
+  function mergeFragments(items) {
+    const lines = [];
+    items.slice().sort((p, q) => q.y - p.y || p.x - q.x).forEach(it => {
+      let L = lines.find(l => Math.abs(l.y - it.y) < LINE_TOL);
+      if (!L) { L = { y: it.y, items: [] }; lines.push(L); }
+      L.items.push(it);
+    });
+    const out = [];
+    for (const L of lines) {
+      L.items.sort((p, q) => p.x - q.x);
+      let cur = null;
+      for (const it of L.items) {
+        if (cur && (it.x - (cur.x + cur.w)) <= FRAG_GAP) {
+          cur.s += it.s;                       // 좁은 간격 → 같은 단어로 이어붙임
+          cur.w = (it.x + (it.w || 0)) - cur.x;
+        } else {
+          if (cur) out.push(cur);
+          cur = { x: it.x, y: L.y, w: it.w || 0, s: it.s };
+        }
+      }
+      if (cur) out.push(cur);
+    }
+    out.forEach(f => {
+      f.s = f.s.replace(/\s+/g, ' ').trim();
+      f.col = colOf(f.x + f.w / 2);            // 열 판정은 덩어리의 중심 좌표로
+    });
+    return out.filter(f => f.s);
+  }
+
   async function extractEvaluations(file) {
     const buf = await file.arrayBuffer();
     // cMapUrl: 한글(HWP)에서 내보낸 PDF는 한국어 글꼴 매핑(cMap)이 있어야 글자가 제대로 읽힘
@@ -251,9 +285,10 @@ DN.Assessment = (function () {
     const rawParts = [];
     for (let p = 1; p <= pdf.numPages; p++) {
       const page = await pdf.getPage(p);
-      const items = (await page.getTextContent()).items
+      const raw = (await page.getTextContent()).items
         .filter(it => it.str.trim())
-        .map(it => ({ x: it.transform[4], y: it.transform[5], s: it.str.trim(), col: colOf(it.transform[4]) }));
+        .map(it => ({ x: it.transform[4], y: it.transform[5], w: it.width || 0, s: it.str }));
+      const items = mergeFragments(raw); // 조각 병합 + 중심 기준 열 판정
       rawParts.push(items.map(it => it.s).join(' '));
       all.push(...parsePageEvals(items));
     }
@@ -585,5 +620,5 @@ DN.Assessment = (function () {
     toast(`${done}/${students.length}명 입력된 결과를 내려받았습니다. (저장과는 별개예요)`, 'success');
   }
 
-  return { render };
+  return { render, extractEvaluations }; // extractEvaluations: 파서 테스트용 공개
 })();
