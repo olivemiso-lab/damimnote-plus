@@ -200,9 +200,18 @@ DN.Assessment = (function () {
     if (!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/lib/pdf.worker.min.js';
     toast('PDF를 읽는 중입니다…', 'info');
     try {
-      const cands = await extractEvaluations(file);
+      const { evals: cands, rawText } = await extractEvaluations(file);
+      const hangul = (rawText.match(/[가-힣]/g) || []).length;
       if (!cands.length) {
-        toast('PDF에서 평가를 찾지 못했습니다. (스캔·이미지 PDF는 인식되지 않습니다)', 'error');
+        if (hangul < 10) {
+          // 텍스트 자체가 안 뽑힘 — 스캔본이거나 특수 글꼴 PDF
+          toast('이 PDF에서는 글자를 읽을 수 없어요. (스캔·이미지 PDF이거나 특수 글꼴) 직접 입력해주세요.', 'error');
+          return;
+        }
+        // 글자는 읽혔지만 표 양식이 달라 인식 실패 → 원문을 보여주고 직접 입력하게
+        pendingDraft = { subject: '국어', unit: '', title: '', date: today(), scaleType: 'level', max: 100, results: {}, rawText };
+        editId = null; view = 'edit'; renderEdit();
+        toast('표 양식을 인식하지 못했어요. 아래 [추출된 원문 보기]를 참고해 직접 입력해주세요.', 'info');
         return;
       }
       if (cands.length > 1) {
@@ -210,7 +219,7 @@ DN.Assessment = (function () {
         editId = null; view = 'review'; renderReview();
         toast(`${cands.length}개의 평가를 찾았어요! 확인 후 저장하세요.`, 'success');
       } else {
-        pendingDraft = Object.assign(cands[0], { date: today(), results: {} });
+        pendingDraft = Object.assign(cands[0], { date: today(), results: {}, rawText });
         editId = null; view = 'edit'; renderEdit();
         toast('계획서를 불러왔습니다! 내용을 확인해주세요.', 'success');
       }
@@ -232,13 +241,20 @@ DN.Assessment = (function () {
 
   async function extractEvaluations(file) {
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    // cMapUrl: 한글(HWP)에서 내보낸 PDF는 한국어 글꼴 매핑(cMap)이 있어야 글자가 제대로 읽힘
+    const pdf = await pdfjsLib.getDocument({
+      data: buf,
+      cMapUrl: 'js/lib/cmaps/',
+      cMapPacked: true,
+    }).promise;
     const all = [];
+    const rawParts = [];
     for (let p = 1; p <= pdf.numPages; p++) {
       const page = await pdf.getPage(p);
       const items = (await page.getTextContent()).items
         .filter(it => it.str.trim())
         .map(it => ({ x: it.transform[4], y: it.transform[5], s: it.str.trim(), col: colOf(it.transform[4]) }));
+      rawParts.push(items.map(it => it.s).join(' '));
       all.push(...parsePageEvals(items));
     }
     // 반복되는 반 중복 제거(과목 + 성취기준 코드)
@@ -249,7 +265,7 @@ DN.Assessment = (function () {
       if (seen.has(key)) continue;
       seen.add(key); out.push(e);
     }
-    return out;
+    return { evals: out, rawText: rawParts.join('\n\n— 다음 페이지 —\n\n') };
   }
 
   // 한 페이지의 표를 칼럼+행으로 분해해 평가 추출
@@ -412,18 +428,62 @@ DN.Assessment = (function () {
   function renderRows(a, students) {
     const score = rootEl.querySelector('input[name="asScale"][value="score"]').checked;
     const box = rootEl.querySelector('#asRows');
-    box.innerHTML = students.map(s => {
+
+    // 일괄 입력 바: 체크한 학생에게 등급/점수를 한 번에
+    const bulkBar = `
+      <div class="as-bulk">
+        <label class="sel-all"><input type="checkbox" id="asPickAll"> 전체</label>
+        <span class="as-bulk-t">체크한 학생 →</span>
+        ${score
+          ? `<input type="number" id="asBulkScore" min="0" placeholder="점수" style="width:74px">
+             <button type="button" class="btn-ghost mini" id="asBulkApply">한 번에 입력</button>`
+          : LEVELS.map(l => `<button type="button" class="btn-ghost mini as-bulk-lv lv-${l.v}" data-bv="${l.v}">${l.t}</button>`).join('')}
+      </div>`;
+
+    box.innerHTML = bulkBar + students.map(s => {
       const r = (a.results && a.results[s.id]) || {};
       const input = score
         ? `<input type="number" class="as-val" data-sid="${s.id}" value="${esc(r.value || '')}" min="0" placeholder="점수" style="width:80px">`
         : `<select class="as-val" data-sid="${s.id}"><option value="">–</option>${LEVELS.map(l => `<option value="${l.v}"${r.value === l.v ? ' selected' : ''}>${l.t}</option>`).join('')}</select>`;
       return `<div class="as-row">
+        <input type="checkbox" class="as-pick" data-sid="${s.id}">
         <span class="as-no">${esc(s.number || '')}</span>
         <span class="as-name">${esc(s.name)}</span>
         ${input}
         <input type="text" class="as-memo" data-sid="${s.id}" value="${esc(r.memo || '')}" placeholder="메모(선택)">
       </div>`;
     }).join('');
+
+    // 전체 선택
+    box.querySelector('#asPickAll').addEventListener('change', e => {
+      box.querySelectorAll('.as-pick').forEach(c => { c.checked = e.target.checked; });
+    });
+    const pickedIds = () => [...box.querySelectorAll('.as-pick:checked')].map(c => c.dataset.sid);
+    const applyTo = (ids, value, label) => {
+      ids.forEach(sid => {
+        const el = box.querySelector(`.as-val[data-sid="${sid}"]`);
+        if (el) el.value = value;
+      });
+      box.querySelectorAll('.as-pick').forEach(c => { c.checked = false; });
+      const all = box.querySelector('#asPickAll');
+      if (all) all.checked = false;
+      toast(`${ids.length}명에게 '${label}' 입력 완료! (저장을 눌러야 확정돼요)`, 'success');
+    };
+    // 성취수준: 등급 버튼
+    box.querySelectorAll('.as-bulk-lv').forEach(b => b.addEventListener('click', () => {
+      const ids = pickedIds();
+      if (!ids.length) { toast('먼저 학생을 체크해주세요.', 'error'); return; }
+      applyTo(ids, b.dataset.bv, LEVEL_T[b.dataset.bv]);
+    }));
+    // 점수: 입력값 적용
+    const bulkApply = box.querySelector('#asBulkApply');
+    if (bulkApply) bulkApply.addEventListener('click', () => {
+      const ids = pickedIds();
+      if (!ids.length) { toast('먼저 학생을 체크해주세요.', 'error'); return; }
+      const v = box.querySelector('#asBulkScore').value.trim();
+      if (v === '') { toast('점수를 입력해주세요.', 'error'); return; }
+      applyTo(ids, v, v + '점');
+    });
   }
 
   function collectResults() {

@@ -410,6 +410,14 @@ details[open] summary::before { content: '▾ '; }
 .assess-input { display: flex; flex-direction: column; gap: 0.35rem; }
 .as-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.4rem; border-radius: 7px; }
 .as-row:nth-child(even) { background: #f8f9ff; }
+.as-pick { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
+/* 일괄 입력 바 */
+.as-bulk { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem 0.6rem; margin-bottom: 0.5rem; background: #eef2ff; border: 1.4px solid #dfe5ff; border-radius: 9px; }
+.as-bulk-t { font-size: 0.8rem; color: #667; font-weight: 600; }
+.as-bulk-lv.lv-high { color: #2e7d32; border-color: #a5d6a7; background: #f1f8e9; }
+.as-bulk-lv.lv-mid  { color: #1565c0; border-color: #90caf9; background: #e3f2fd; }
+.as-bulk-lv.lv-low  { color: #ef6c00; border-color: #ffcc80; background: #fff3e0; }
+.as-bulk-lv.lv-need { color: #c62828; border-color: #ef9a9a; background: #ffebee; }
 .as-no { flex: 0 0 28px; height: 24px; background: #eef0ff; color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.74rem; font-weight: bold; }
 .as-name { flex: 0 0 70px; font-size: 0.86rem; font-weight: 600; }
 .as-val { flex: 0 0 auto; }
