@@ -13,7 +13,7 @@ DN.Backup = (function () {
   // 화면에 보여 줄 컬렉션 이름. 목록에 없는 컬렉션도 백업·복원 대상에는 모두 포함된다
   const LABELS = {
     settings: '설정', students: '학생', events: '일정', observations: '관찰 기록',
-    attendance: '출결 메모', presets: '관찰 상황 버튼', timetables: '시간표',
+    attendance: '출결 메모', presets: '관찰 상황 버튼', timetables: '시간표', seatings: '자리·모둠 배치', relations: '갈등·동행 관계',
   };
   let rootEl = null;
 

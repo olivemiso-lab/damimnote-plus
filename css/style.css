@@ -833,3 +833,63 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .wk-m-t { flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; }
 .wk-m-t small { color: var(--ink-sub); }
 .wk-m-extra { margin-top: 8px; font-size: 13px; font-weight: 700; }
+
+/* ── 자리·모둠 배치 ── */
+.empty-card { text-align: center; padding: 28px; }
+.empty-card p { margin-bottom: 12px; color: var(--ink-sub); }
+.seat-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 6px 0 12px; }
+.seat-hint { font-size: 12.5px; font-weight: 800; color: var(--sky-ink); }
+.seat-conds { margin-bottom: 4px; }
+.seat-run { width: 100%; margin-top: 12px; padding: 12px; font-size: 15px; }
+.seat-sum { cursor: pointer; font-weight: 900; font-size: 14px; }
+.seat-sum small { font-weight: 700; color: var(--ink-sub); }
+.seat-tip { margin: 0 0 10px; }
+.seat-actions { margin-top: 14px; }
+.seat-card { margin-top: 16px; }
+#stResult:empty { display: none; }
+
+.rel-editor { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 12px; }
+.rel-block h3 { font-size: 13.5px; font-weight: 900; margin-bottom: 6px; }
+.rel-block h3 small { font-weight: 600; color: var(--ink-sub); font-size: 11.5px; }
+.rel-input { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rel-input select { flex: 1; min-width: 72px; }
+.rel-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.rel-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 700; padding: 3px 4px 3px 11px; border-radius: 999px; }
+.rel-tag.rc { background: var(--rose-bg); color: var(--danger); }
+.rel-tag.rf { background: var(--mint-bg); color: var(--mint-ink); }
+.rel-tag button { border: none; background: none; color: inherit; font-size: 11px; padding: 2px 6px; }
+.rel-empty { font-size: 12px; color: var(--ink-sub); }
+
+.board-wrap { overflow-x: auto; }
+.blackboard {
+  text-align: center; font-weight: 900; letter-spacing: 0.3em; font-size: 13px;
+  background: var(--mint-bg); color: var(--mint-ink); border: 1.5px solid #b5e3c8;
+  border-radius: 12px; padding: 8px; margin-bottom: 14px; min-width: 520px;
+}
+.bd-grid { display: grid; gap: 14px; min-width: 520px; }
+.bd-island { border: 1.5px solid var(--line); border-top-width: 4px; border-radius: 16px; background: #fff; overflow: hidden; }
+.bd-label { display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 13px; font-weight: 900; border-bottom: 1px solid var(--line); cursor: default; }
+.bd-label[data-glabel] { cursor: pointer; }
+.bd-label.drop { outline: 2px dashed currentColor; outline-offset: -4px; }
+.bd-count { font-size: 11.5px; font-weight: 700; opacity: 0.8; }
+.bd-move { margin-left: auto; font-size: 11.5px; }
+.bd-desks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; }
+.bd-desk {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 4px;
+  min-height: 38px; padding: 6px 4px; border: 1.5px solid var(--line-strong); border-radius: 10px;
+  background: var(--soft); font-size: 13px; font-weight: 800; text-align: center;
+}
+.bd-desk.clickable { cursor: pointer; }
+.bd-desk.clickable:hover { border-color: var(--sky-mid); background: #fff; }
+.bd-desk.sel { border-color: var(--sky-ink); background: var(--sky-bg); box-shadow: 0 0 0 2px var(--sky-mid); }
+.bd-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-g { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.bd-g.male { background: #6aa9d8; }
+.bd-g.female { background: #ea8fae; }
+.bd-care { position: absolute; top: 1px; right: 4px; font-size: 10px; }
+
+.hist-item { padding: 10px 2px; border-bottom: 1.5px dashed var(--line); }
+.hist-item:last-child { border-bottom: none; }
+.hist-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 4px; }
+.hist-groups { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; }
+.hist-gid { display: inline-block; font-size: 11px; font-weight: 900; padding: 0 8px; border-radius: 999px; }
