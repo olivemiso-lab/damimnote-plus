@@ -37,6 +37,7 @@ DN.App = (function () {
     DN.utils.closeModal();
     mobileMode = DN.Mobile.active();
     document.body.classList.toggle('m-mode', mobileMode);
+    if (DN.Cloud) DN.Cloud.renderBar();
     if (mobileMode) {
       refreshBanner();
       DN.Mobile.render(document.getElementById('view'));
@@ -114,6 +115,7 @@ DN.App = (function () {
     const onChange = function () { if (DN.Mobile.active() !== mobileMode) relayout(); };
     if (mq.addEventListener) mq.addEventListener('change', onChange); else mq.addListener(onChange);
     relayout();
+    if (DN.Cloud) DN.Cloud.start();
     registerSW();
   }
 

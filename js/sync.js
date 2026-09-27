@@ -333,12 +333,19 @@ DN.Sync = (function () {
     const d = new Date(iso);
     return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
+  let cloudHooked = false;
   function render(container) {
     rootEl = container;
+    if (DN.Cloud && !cloudHooked) {
+      cloudHooked = true;
+      DN.Cloud.onChange(function () { if (rootEl && rootEl.querySelector('#syCloud')) renderCloud(); });
+    }
     const events = DN.Events.live().length;
     container.innerHTML = '\
       <div class="page-head"><h1>🔄 핸드폰 연결</h1></div>\
-      <p class="set-help sync-lead">서버 없이 <b>파일</b>로 옮겨요. 카카오톡 “나와의 채팅”이나 메일로 파일을 보내 다른 기기에서 여세요. 데이터는 두 기기에만 있어요.</p>\
+      <div class="card cloud-card" id="syCloud"></div>\
+      <h2 class="side-title sync-alt">구글 없이 파일로 옮기기</h2>\
+      <p class="set-help sync-lead">카카오톡 “나와의 채팅”이나 메일로 파일을 보내 다른 기기에서 여세요.</p>\
       <div class="sync-grid">\
         <div class="card">\
           <h2 class="side-title">📤 PC → 핸드폰 : 일정 보내기</h2>\
@@ -361,6 +368,7 @@ DN.Sync = (function () {
         </div>\
       </div>';
     renderPlan();
+    renderCloud();
     container.querySelector('#syPcFile').addEventListener('click', function () {
       const f = buildPcFile();
       saveFile(f.filename, f.obj).then(function (done) {
@@ -379,6 +387,33 @@ DN.Sync = (function () {
       }, function (err) { toast(err.message, 'error'); });
     });
   }
+  // ── 구글 드라이브 자동 동기화 카드 ──
+  function renderCloud() {
+    const box = rootEl && rootEl.querySelector('#syCloud');
+    if (!box || !DN.Cloud) return;
+    const C = DN.Cloud;
+    box.innerHTML = '<div class="side-head"><h2 class="side-title">☁️ 구글 드라이브 자동 동기화</h2>' +
+      (C.linked() ? '<span class="cloud-on">연결됨</span>' : '') + '</div>' +
+      (C.linked()
+        ? '<p class="cloud-acct">' + esc(C.account() || '구글 계정') + '</p><p class="set-help" style="margin-top:0">' + esc(C.statusText()) + '</p>' +
+          '<div class="pv-bar"><button class="btn-primary" id="cloudSync"' + (C.isBusy() ? ' disabled' : '') + '>지금 동기화</button>' +
+          '<span class="pv-spacer"></span><button class="btn-cancel" id="cloudOff">연결 끊기</button></div>'
+        : '<ul class="sync-list">' +
+            '<li>핸드폰과 PC를 <b>같은 구글 계정</b>으로 한 번씩 연결하면, 핸드폰 기록이 PC로 저절로 들어와요. 파일을 옮길 필요가 없어요.</li>' +
+            '<li>기록은 선생님 드라이브의 <b>앱 전용 숨김 폴더</b>에만 저장돼요. 드라이브의 다른 파일은 보지 않아요.</li>' +
+            '<li>학생 이름·담당 교직원 이름·메모·첨부는 <b>올라가지 않아요</b> (번호로만).</li>' +
+          '</ul><button class="btn-primary" id="cloudOn">구글로 연결</button>');
+    const on = box.querySelector('#cloudOn');
+    if (on) on.addEventListener('click', function () { C.connect().then(renderCloud); });
+    const s = box.querySelector('#cloudSync');
+    if (s) s.addEventListener('click', function () { C.sync(true).then(function () { if (rootEl && rootEl.isConnected) renderCloud(); }); });
+    const off = box.querySelector('#cloudOff');
+    if (off) off.addEventListener('click', function () {
+      if (!DN.utils.confirmAsk('구글 드라이브 연결을 끊을까요? 이 PC의 기록은 그대로 남아요.')) return;
+      C.disconnect().then(function () { renderCloud(); toast('연결을 끊었어요.', 'info'); });
+    });
+  }
+
   function renderPlan() {
     const box = rootEl && rootEl.querySelector('#syPlan');
     if (!box) return;

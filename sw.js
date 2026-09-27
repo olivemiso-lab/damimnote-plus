@@ -3,7 +3,7 @@
 //  ⚠ 배포할 때마다 VERSION을 올릴 것. 그래야 교사 화면에 “새 버전이 있어요” 안내가 뜬다.
 //  데이터(localStorage·IndexedDB)는 건드리지 않는다. 외부 요청 없음.
 // ════════════════════════════════════════════════════
-const VERSION = '2026-09-27-5';
+const VERSION = '2026-09-28-1';
 const CACHE = 'damimnote-' + VERSION;
 
 // 설치할 때 미리 받아 두는 앱 파일. 하나라도 없으면 설치가 실패하므로 파일을 추가·삭제하면 여기도 고칠 것
@@ -33,6 +33,7 @@ const APP_FILES = [
   './js/seating.js',
   './js/backup.js',
   './js/sync.js',
+  './js/cloud.js',
   './js/mobile.js',
   './js/app.js',
 ];

@@ -61,11 +61,7 @@ DN.Mobile = (function () {
       if (st.view === 'home') render(root);
     });
     root.querySelector('#mMenu').addEventListener('click', openMenu);
-    const send = root.querySelector('#mSend');
-    if (send) send.addEventListener('click', function () {
-      send.disabled = true;
-      DN.Sync.sendFromPhone().then(function () { render(root); });
-    });
+    bindSendBar(root);
     const back = root.querySelector('#mBack');
     if (back) back.addEventListener('click', function () { go('home'); });
     showUndo();
@@ -81,10 +77,35 @@ DN.Mobile = (function () {
   }
 
   function sendBar() {
-    const n = R.unsentCount();
-    return '<div class="m-send"><span>PC로 보내지 않은 기록 <b>' + n + '</b>건</span>' +
-      '<button class="btn-primary" id="mSend">PC로 보내기</button></div>';
+    return '<div class="m-send" id="mSendBar">' + sendBarInner() + '</div>';
   }
+  function sendBarInner() {
+    const n = R.unsentCount();
+    if (DN.Cloud && DN.Cloud.linked()) {
+      return '<span class="m-cloud">☁️ ' + esc(DN.Cloud.statusText()) + (n ? ' · 안 보낸 기록 <b>' + n + '</b>건' : '') + '</span>' +
+        '<button class="btn-primary" id="mCloud"' + (DN.Cloud.isBusy() ? ' disabled' : '') + '>동기화</button>';
+    }
+    return '<span>PC로 보내지 않은 기록 <b>' + n + '</b>건</span><button class="btn-primary" id="mSend">PC로 보내기</button>';
+  }
+  function bindSendBar(root) {
+    const send = root.querySelector('#mSend');
+    if (send) send.addEventListener('click', function () {
+      send.disabled = true;
+      DN.Sync.sendFromPhone().then(function () { render(root); });
+    });
+    const cloud = root.querySelector('#mCloud');
+    if (cloud) cloud.addEventListener('click', function () {
+      DN.Cloud.sync(true).then(function () { refreshSendBar(); });
+    });
+  }
+  // 동기화 상태가 바뀌면 아래 줄만 새로 그린다(기록 중인 화면은 그대로)
+  function refreshSendBar() {
+    const bar = rootEl && rootEl.querySelector('#mSendBar');
+    if (!bar) return;
+    bar.innerHTML = sendBarInner();
+    bindSendBar(rootEl);
+  }
+  if (DN.Cloud) DN.Cloud.onChange(refreshSendBar);
 
   // ── 첫 실행: 학생 수만 묻고 바로 시작 ──
   function renderSetup() {
@@ -182,6 +203,7 @@ DN.Mobile = (function () {
       E.update(ev.id, { done: !ev.done });
       toast(ev.done ? '완료 표시를 풀었어요.' : '완료!', 'success');
       render(rootEl);
+      if (DN.Cloud) DN.Cloud.soon();
     });
   }
 
@@ -216,6 +238,7 @@ DN.Mobile = (function () {
     st.memo = ''; st.memoOpen = false;
     st.undo = { col: col, ids: saved.map(function (r) { return r.id; }), text: text };
     render(rootEl);
+    if (DN.Cloud) DN.Cloud.soon();
   }
 
   // ── 관찰 기록 ──
@@ -290,6 +313,7 @@ DN.Mobile = (function () {
       st.undo = null;
       toast('방금 기록을 되돌렸어요.', 'info');
       render(rootEl);
+      if (DN.Cloud) DN.Cloud.soon();
     });
     clearTimeout(undoTimer);
     undoTimer = setTimeout(function () { st.undo = null; box.hidden = true; }, 6000);
@@ -304,7 +328,13 @@ DN.Mobile = (function () {
         return '<option value="' + g + '"' + (g === s.grade ? ' selected' : '') + '>' + g + '학년</option>'; }).join('') + '</select>' +
       '</div>' +
       '<label class="check-label m-check"><input type="checkbox" id="mnPhone"' + (isPhone() ? ' checked' : '') + '> 이 기기는 핸드폰이에요</label>' +
-      '<div class="md-label">PC와 주고받기</div>' +
+      '<div class="md-label">☁️ 구글 드라이브 자동 동기화</div>' +
+      (DN.Cloud.linked()
+        ? '<p class="set-help" style="margin-top:0">연결됨: ' + esc(DN.Cloud.account() || '구글 계정') + '<br>PC에서도 같은 계정으로 연결하면 기록이 저절로 오가요.</p>' +
+          '<div class="m-menu-btns"><button class="btn-ghost" id="mnCloudOff">연결 끊기</button></div>'
+        : '<p class="set-help" style="margin-top:0">PC와 같은 구글 계정으로 연결하면 파일을 옮기지 않아도 기록이 저절로 오가요. 기록은 선생님 드라이브의 숨김 폴더에만 저장되고, 학생 이름은 올라가지 않아요.</p>' +
+          '<div class="m-menu-btns"><button class="btn-primary" id="mnCloudOn">구글로 연결</button></div>') +
+      '<div class="md-label">파일로 PC와 주고받기</div>' +
       '<div class="m-menu-btns">' +
         '<label class="btn-secondary bk-file">일정 받기<input type="file" id="mnReceive" accept=".json,application/json" hidden></label>' +
         '<button class="btn-ghost" id="mnCleanup">PC로 보낸 기록 정리</button>' +
@@ -319,6 +349,15 @@ DN.Mobile = (function () {
     const inst = m.querySelector('#mInstall');
     if (inst) inst.addEventListener('click', function () { if (installPrompt) { installPrompt.prompt(); installPrompt = null; inst.hidden = true; } });
     m.querySelector('#mnBackup').addEventListener('click', function () { DN.Backup.exportJson(); });
+    const cloudOn = m.querySelector('#mnCloudOn');
+    if (cloudOn) cloudOn.addEventListener('click', function () {
+      DN.Cloud.connect().then(function () { if (DN.Cloud.linked()) { closeModal(); render(rootEl); } });
+    });
+    const cloudOff = m.querySelector('#mnCloudOff');
+    if (cloudOff) cloudOff.addEventListener('click', function () {
+      if (!DN.utils.confirmAsk('구글 드라이브 연결을 끊을까요? 이 기기의 기록은 그대로 남아요.')) return;
+      DN.Cloud.disconnect().then(function () { closeModal(); render(rootEl); toast('연결을 끊었어요.', 'info'); });
+    });
     m.querySelector('#mnReceive').addEventListener('change', function (e) {
       const file = e.target.files && e.target.files[0];
       e.target.value = '';
