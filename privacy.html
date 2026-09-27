@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>담임노트+ 개인정보처리방침</title>
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <style>
+    body { font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: #fdfaf5; color: #3b3531; line-height: 1.7; margin: 0; padding: 24px 16px 60px; }
+    main { max-width: 720px; margin: 0 auto; background: #fff; border: 1px solid #f0e6da; border-radius: 18px; padding: 24px 28px; }
+    h1 { font-size: 22px; color: #c85a33; margin: 0 0 4px; }
+    h2 { font-size: 16px; margin: 26px 0 6px; }
+    p, li { font-size: 14.5px; }
+    .meta { color: #7d716a; font-size: 13px; margin-bottom: 18px; }
+    .box { background: #dcf3e6; color: #22704a; border-radius: 12px; padding: 12px 16px; font-weight: 700; }
+    a { color: #1f5f8b; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>📒 담임노트+ 개인정보처리방침</h1>
+  <p class="meta">시행일: 2026년 9월 28일 · 앱 주소: <a href="https://olivemiso-lab.github.io/damimnote-plus/">https://olivemiso-lab.github.io/damimnote-plus/</a></p>
+
+  <p class="box">담임노트+ 개발자는 사용자의 어떤 개인정보도 수집하거나 저장하지 않습니다. 모든 기록은 선생님의 기기에, 그리고 선생님이 선택한 경우 선생님 본인의 구글 드라이브에만 저장됩니다.</p>
+
+  <h2>1. 담임노트+는 무엇인가요</h2>
+  <p>초등 담임교사가 학교 일정, 학생 관찰·출결 메모, 자리·모둠 배치를 관리하는 무료 웹앱입니다. 회원가입이 없고, 개발자가 운영하는 서버가 없습니다.</p>
+
+  <h2>2. 기록이 저장되는 곳</h2>
+  <ul>
+    <li>입력한 학생 명단, 관찰·출결 메모, 일정, 첨부 파일은 <b>사용하는 브라우저 안(localStorage, IndexedDB)</b>에만 저장됩니다.</li>
+    <li>개발자에게 전송되는 정보는 없습니다. 광고, 사용 통계·분석 도구를 쓰지 않습니다.</li>
+    <li>브라우저 데이터를 지우면 기록도 지워지므로, 앱의 [백업] 메뉴로 백업 파일을 받아 두시기 바랍니다.</li>
+  </ul>
+
+  <h2>3. 구글 드라이브 동기화 (선택)</h2>
+  <p>핸드폰과 PC의 기록을 맞추기 위해 사용자가 직접 [구글로 연결]을 누른 경우에만 동작합니다.</p>
+  <ul>
+    <li><b>요청하는 권한:</b> <code>https://www.googleapis.com/auth/drive.appdata</code> 하나입니다. 이 권한으로는 담임노트+가 사용자의 구글 드라이브에 만든 <b>앱 전용 숨김 폴더</b>의 파일만 읽고 쓸 수 있으며, 드라이브의 다른 파일은 볼 수 없습니다.</li>
+    <li><b>드라이브에 저장되는 내용:</b> 관찰·출결 기록(학생 번호, 날짜, 상황·유형), 학교 일정, 시간표, 관찰 상황 버튼, 학년·반·학생 수. <b>학생 이름, 담당 교직원 이름, 메모, 첨부 파일은 올리지 않습니다.</b></li>
+    <li><b>연결한 계정의 이메일 주소:</b> 어떤 계정으로 연결했는지 화면에 보여 주기 위해 사용자의 기기에만 저장합니다.</li>
+    <li>로그인 권한(액세스 토큰)은 사용 중인 브라우저 탭에만 약 1시간 보관되며 개발자에게 전송되지 않습니다.</li>
+    <li>드라이브와 주고받는 데이터는 사용자의 브라우저와 구글 사이에서만 오가며, 개발자의 서버를 거치지 않습니다.</li>
+  </ul>
+  <p>담임노트+가 Google API로부터 받은 정보를 사용하고 다른 앱으로 전송하는 방식은 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API 서비스 사용자 데이터 정책</a>의 제한적 사용(Limited Use) 요구사항을 준수합니다. 받은 정보는 위의 동기화 기능에만 사용하며, 제3자에게 제공하거나 광고에 사용하지 않습니다.</p>
+
+  <h2>4. 연결 끊기와 삭제</h2>
+  <ul>
+    <li>앱의 [핸드폰 연결] 또는 핸드폰 ⚙️ 설정에서 [연결 끊기]를 누르면 동기화가 멈추고 로그인 권한이 취소됩니다. 기기의 기록은 그대로 남습니다.</li>
+    <li>구글 계정 설정의 <a href="https://myaccount.google.com/connections">서드파티 앱 및 서비스</a>에서 담임노트+의 액세스를 삭제할 수 있고, 구글 드라이브 설정의 [앱 관리]에서 담임노트+의 숨김 데이터를 삭제할 수 있습니다.</li>
+    <li>기기의 기록은 브라우저의 사이트 데이터를 지우면 삭제됩니다.</li>
+  </ul>
+
+  <h2>5. 학생 개인정보에 관한 안내</h2>
+  <p>학생 정보는 교사가 학교의 개인정보 관련 규정에 따라 입력·관리해야 합니다. 핸드폰에서는 학생 이름 없이 번호로만 기록하며, 출결 사유는 분류(질병·미인정 등)만 적도록 안내합니다. 공식 출결은 나이스에 입력하세요.</p>
+
+  <h2>6. 문의</h2>
+  <p>이 방침이나 앱에 대한 문의는 <a href="https://github.com/olivemiso-lab/damimnote-plus/issues">담임노트+ 문의 게시판(GitHub)</a>에 남겨 주세요. 방침이 바뀌면 이 페이지에 시행일과 함께 알립니다.</p>
+</main>
+</body>
+</html>
