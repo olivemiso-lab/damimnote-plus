@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>담임노트+ · 초등 담임교사용 학급경영</title>
+  <meta name="theme-color" content="#fff5eb">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="담임노트+">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-title">📒 담임노트<span class="plus">+</span></div>
+        <div class="brand-sub">우리 반 학급경영 노트</div>
+      </div>
+      <nav id="nav" class="nav"></nav>
+      <div class="side-foot">오프라인에서 동작해요.<br>데이터는 이 브라우저에만 저장됩니다.</div>
+    </aside>
+    <main class="main">
+      <div id="update" class="update-bar" hidden></div>
+      <div id="banner" class="backup-hint app-banner" hidden></div>
+      <div id="view"></div>
+    </main>
+  </div>
+
+  <!-- 로드 순서 고정: vendor → utils → store → settings → files → 기능 모듈 → app
+       (kordoc.browser.js는 월중행사를 가져올 때 schedule.js가 불러온다) -->
+  <script src="js/vendor/jszip.min.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/files.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/together.js"></script>
+  <script src="js/schedule.js"></script>
+  <script src="js/schedule-view.js"></script>
+  <script src="js/records.js"></script>
+  <script src="js/picker.js"></script>
+  <script src="js/observe.js"></script>
+  <script src="js/attend.js"></script>
+  <script src="js/students.js"></script>
+  <script src="js/backup.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/mobile.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

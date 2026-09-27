@@ -1,0 +1,8 @@
+# 교직원 실명이 들어 있는 샘플 — 절대 올리지 않음
+tests/samples/
+
+# 공개 저장소에는 앱 파일만 올린다 (아래는 이 PC에만 둠)
+tests/
+docs/
+CLAUDE.md
+.claude/

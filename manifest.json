@@ -1,0 +1,16 @@
+{
+  "name": "담임노트+",
+  "short_name": "담임노트+",
+  "description": "초등 담임교사용 학급경영 노트 — 학교 일정과 학생 기록. 데이터는 이 기기에만 저장됩니다.",
+  "lang": "ko",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fdfaf5",
+  "theme_color": "#fff5eb",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
