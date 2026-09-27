@@ -162,6 +162,7 @@ DN.Mobile = (function () {
     body.innerHTML =
       '<section class="m-card"><h2>' + (d === today() ? '오늘' : mdw(d)) + ' <small>' + (d === today() ? mdw(d) : '') + '</small></h2>' +
         (todays.length ? '<ul class="m-list">' + todays.map(evLine).join('') + '</ul>' : '<p class="m-empty">일정이 없어요.</p>') + '</section>' +
+      (DN.Weekly.forDate(d) ? '<section class="m-card"><h2>🕘 ' + (d === today() ? '오늘' : mdw(d)) + ' 시간표</h2>' + DN.Weekly.dayListHtml(DN.Weekly.forDate(d)) + '</section>' : '') +
       '<div class="m-actions">' +
         '<button class="m-action obs" id="mGoObs"><span>📝</span>관찰 기록</button>' +
         '<button class="m-action att" id="mGoAtt"><span>🗓️</span>출결</button></div>' +

@@ -19,7 +19,7 @@ DN.ScheduleView = (function () {
     let saved = {};
     try { saved = JSON.parse(DN.Store.getMeta('scheduleView') || '{}') || {}; } catch (e) {}
     return {
-      mode: saved.mode === 'list' ? 'list' : 'calendar',
+      mode: ['list', 'timetable'].indexOf(saved.mode) >= 0 ? saved.mode : 'calendar',
       myGrade: !!saved.myGrade,
       mineOnly: !!saved.mineOnly,
       month: today().slice(0, 7),
@@ -29,6 +29,19 @@ DN.ScheduleView = (function () {
   function saveState() {
     DN.Store.setMeta('scheduleView', JSON.stringify({ mode: state.mode, myGrade: state.myGrade, mineOnly: state.mineOnly }));
   }
+  // 주간학습안내를 등록한 뒤: 그 주 시간표 보기로
+  function showTimetable(date) {
+    state.mode = 'timetable';
+    state.selected = date;
+    state.month = date.slice(0, 7);
+    saveState();
+  }
+  // 시간표 보기의 주: 평일이면 그 주, 주말이면 다음 주 (주말에 보는 시간표는 대개 다음 주)
+  function mondayOf(d) {
+    const w = new Date(d + 'T00:00:00').getDay();
+    return E.addDays(d, w === 0 ? 1 : w === 6 ? 2 : 1 - w);
+  }
+
   function setMonth(ym) {
     state.month = ym;
     state.selected = ym === today().slice(0, 7) ? today() : ym + '-01';
@@ -51,25 +64,29 @@ DN.ScheduleView = (function () {
   function render(container) {
     rootEl = container;
     const y = +state.month.slice(0, 4), m = +state.month.slice(5, 7);
+    const tt = state.mode === 'timetable';
+    const mon = mondayOf(state.selected);
+    const navLabel = tt ? md(mon) + ' ~ ' + md(E.addDays(mon, 4)) : y + '년 ' + m + '월';
     container.innerHTML = '\
       <div class="page-head">\
         <h1>📅 학교 일정</h1>\
         <span class="pv-spacer"></span>\
         <label class="btn-secondary bk-file">월중행사 가져오기<input type="file" id="scImport" accept=".hwp,.hwpx" hidden></label>\
+        <label class="btn-secondary bk-file">주간학습안내 가져오기<input type="file" id="scWeekly" accept=".hwp,.hwpx" hidden></label>\
         <button class="btn-primary" id="scAdd">+ 일정 직접 추가</button>\
       </div>\
       <div class="sc-layout">\
         <div class="card sc-main">\
           <div class="sc-bar">\
-            <button class="btn-ghost sc-nav" id="scPrev" aria-label="이전 달">◀</button>\
-            <strong class="sc-month">' + y + '년 ' + m + '월</strong>\
-            <button class="btn-ghost sc-nav" id="scNext" aria-label="다음 달">▶</button>\
+            <button class="btn-ghost sc-nav" id="scPrev" aria-label="' + (tt ? '이전 주' : '이전 달') + '">◀</button>\
+            <strong class="sc-month">' + navLabel + '</strong>\
+            <button class="btn-ghost sc-nav" id="scNext" aria-label="' + (tt ? '다음 주' : '다음 달') + '">▶</button>\
             <button class="btn-ghost sc-today" id="scToday">오늘</button>\
             <span class="pv-spacer"></span>\
             <button class="toggle" id="fGrade" aria-pressed="' + state.myGrade + '">우리 학년만</button>\
             <button class="toggle" id="fMine" aria-pressed="' + state.mineOnly + '">내 담당만</button>\
             <span class="seg">\
-              <button id="vCal" aria-pressed="' + (state.mode === 'calendar') + '">달력</button><button id="vList" aria-pressed="' + (state.mode === 'list') + '">목록</button>\
+              <button id="vCal" aria-pressed="' + (state.mode === 'calendar') + '">달력</button><button id="vList" aria-pressed="' + (state.mode === 'list') + '">목록</button><button id="vTime" aria-pressed="' + tt + '">시간표</button>\
             </span>\
           </div>\
           <div id="scBody"></div>\
@@ -80,7 +97,7 @@ DN.ScheduleView = (function () {
         </div>\
       </div>';
 
-    container.querySelector('#scBody').innerHTML = state.mode === 'calendar' ? calendarHtml(y, m) : listHtml();
+    container.querySelector('#scBody').innerHTML = state.mode === 'calendar' ? calendarHtml(y, m) : tt ? timetableHtml(mon) : listHtml();
     renderTodo();
     renderDay();
     bind(container);
@@ -91,8 +108,18 @@ DN.ScheduleView = (function () {
       if (e.target.files && e.target.files[0]) DN.Schedule.importFile(e.target.files[0]);
       e.target.value = '';
     });
+    c.querySelector('#scWeekly').addEventListener('change', function (e) {
+      if (e.target.files && e.target.files[0]) DN.Weekly.importFile(e.target.files[0]);
+      e.target.value = '';
+    });
     c.querySelector('#scAdd').addEventListener('click', function () { openAdd(state.selected); });
     const move = function (delta) {
+      if (state.mode === 'timetable') {
+        state.selected = E.addDays(mondayOf(state.selected), 7 * delta);
+        state.month = state.selected.slice(0, 7);
+        render(c);
+        return;
+      }
       const d = new Date(+state.month.slice(0, 4), +state.month.slice(5, 7) - 1 + delta, 1);
       setMonth(E.toStr(d).slice(0, 7));
       render(c);
@@ -104,6 +131,14 @@ DN.ScheduleView = (function () {
     c.querySelector('#fMine').addEventListener('click', function () { state.mineOnly = !state.mineOnly; saveState(); render(c); });
     c.querySelector('#vCal').addEventListener('click', function () { state.mode = 'calendar'; saveState(); render(c); });
     c.querySelector('#vList').addEventListener('click', function () { state.mode = 'list'; saveState(); render(c); });
+    c.querySelector('#vTime').addEventListener('click', function () { state.mode = 'timetable'; saveState(); render(c); });
+    const del = c.querySelector('#wkDelete');
+    if (del) del.addEventListener('click', function () {
+      if (!confirmAsk('이 주 시간표를 지울까요? 주간학습안내를 다시 가져오면 되살릴 수 있어요.')) return;
+      DN.Weekly.remove(del.dataset.id);
+      toast('시간표를 지웠어요.', 'success');
+      render(c);
+    });
 
     // 달력·목록·패널 공통: data-id → 상세, data-date → 그 날 선택, data-done → 완료 토글
     // (#view는 다른 메뉴도 쓰므로, 렌더할 때마다 새로 만들어지는 .sc-layout에 붙인다)
@@ -186,6 +221,18 @@ DN.ScheduleView = (function () {
         cells + nums + bars + singles + '</div>';
     });
     return html + '</div><p class="cal-legend"><span class="lg lg-mine"></span>내 담당 <span class="lg lg-dl"></span>제출 마감 <span class="lg lg-period"></span>기간·연속 행사 <span class="lg lg-hol"></span>휴일</p>';
+  }
+
+  // ── 시간표 (주간학습안내) ──
+  function timetableHtml(mon) {
+    const t = DN.Weekly.forWeek(mon);
+    if (!t) {
+      return '<div class="empty wk-empty">' + esc(md(mon) + ' ~ ' + md(E.addDays(mon, 4))) + ' 주의 시간표가 없어요.<br>' +
+        '<small>위의 [주간학습안내 가져오기]로 한글 파일(.hwp, .hwpx)을 올리면 시간표가 만들어져요.</small></div>';
+    }
+    return '<div class="wk-head"><b>' + esc([t.title, t.weekLabel].filter(Boolean).join(' · ')) + '</b>' +
+      '<span class="pv-spacer"></span><button class="btn-ghost side-add" id="wkDelete" data-id="' + esc(t.id) + '">이 주 시간표 지우기</button></div>' +
+      DN.Weekly.weekTableHtml(t, today());
   }
 
   // ── 목록 ──
@@ -486,5 +533,5 @@ DN.ScheduleView = (function () {
     });
   }
 
-  return { render, setMonth, openDetail, openAdd, closeModal };
+  return { render, setMonth, showTimetable, openDetail, openAdd, closeModal };
 })();

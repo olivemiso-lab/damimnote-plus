@@ -544,7 +544,7 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 
 /* 화면이 넓지 않으면 할 일·날짜 패널을 달력 아래로 */
 @media (max-width: 1280px) {
-  .sc-layout { grid-template-columns: 1fr; }
+  .sc-layout { grid-template-columns: minmax(0, 1fr); }
   .sc-side { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; }
 }
 @media (max-width: 960px) {
@@ -793,3 +793,46 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .sync-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .m-menu .md-label, .modal .md-label { margin-top: 14px; }
 .stu-name.no-name { color: var(--ink-sub); font-weight: 700; }
+
+/* ── 시간표 (주간학습안내) ── */
+.subj-peach { background: var(--peach-bg); color: var(--peach-ink); border-color: var(--peach-mid); }
+.subj-sky   { background: var(--sky-bg);   color: var(--sky-ink);   border-color: var(--sky-mid); }
+.subj-mint  { background: var(--mint-bg);  color: var(--mint-ink);  border-color: #b5e3c8; }
+.subj-lemon { background: var(--lemon-bg); color: var(--lemon-ink); border-color: var(--lemon-mid); }
+.subj-lilac { background: var(--lilac-bg); color: var(--lilac-ink); border-color: #d3c8f5; }
+.subj-pink  { background: var(--pink-bg);  color: var(--pink-ink);  border-color: #f6c3d1; }
+.wk-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; }
+.wk-empty { line-height: 1.8; }
+.wk-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
+.wk-table th, .wk-table td { border: 1px solid var(--line); padding: 6px; vertical-align: top; text-align: left; }
+.wk-table thead th { background: var(--soft); text-align: center; font-size: 13px; font-weight: 900; }
+.wk-table thead th small { font-weight: 600; color: var(--ink-sub); }
+.wk-table thead th.today { background: var(--peach-bg); color: var(--peach-ink); }
+.wk-table tbody th { width: 58px; background: var(--soft); text-align: center; vertical-align: middle; font-size: 12px; color: var(--ink-sub); }
+.wk-chip { display: inline-block; border: 1px solid transparent; border-radius: 999px; padding: 1px 10px; font-size: 12.5px; font-weight: 900; }
+.wk-content { margin-top: 3px; line-height: 1.45; }
+.wk-pages-t { margin-top: 2px; font-size: 11px; color: var(--ink-sub); }
+.wk-cont { background: #fcfaf7; }
+.wk-cont .wk-chip { opacity: 0.55; }
+.wk-off { background: #fff5f5 !important; color: var(--danger); font-weight: 900; text-align: center !important; vertical-align: middle !important; font-size: 14px; }
+.wk-evrow td { font-size: 12px; color: var(--ink-sub); }
+.wk-notice { margin-top: 10px; font-size: 12.5px; }
+.wk-notice summary { cursor: pointer; font-weight: 800; color: var(--ink-sub); }
+.wk-notice p { margin-top: 6px; padding: 10px 12px; background: var(--soft); border-radius: 12px; line-height: 1.6; }
+/* 미리보기(수정) */
+.wk-edit { min-width: 900px; }
+.wk-edit input, .wk-edit textarea { width: 100%; padding: 3px 6px; font-size: 12px; border-radius: 8px; }
+.wk-edit textarea { margin: 3px 0; resize: vertical; }
+.wk-edit thead input { font-weight: 800; }
+.wk-wd { font-size: 12px; margin-top: 2px; }
+.wk-subj { font-weight: 900; border-width: 1.5px !important; }
+.wk-pages { font-size: 11px !important; }
+.wk-sum { margin: 0; }
+/* 핸드폰 오늘 시간표 */
+.wk-mlist { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.wk-m { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }
+.wk-no { width: 20px; flex-shrink: 0; text-align: center; font-weight: 900; color: var(--ink-sub); padding-top: 1px; }
+.wk-m .wk-chip { flex-shrink: 0; font-size: 13px; }
+.wk-m-t { flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; }
+.wk-m-t small { color: var(--ink-sub); }
+.wk-m-extra { margin-top: 8px; font-size: 13px; font-weight: 700; }

@@ -288,6 +288,7 @@ DN.Schedule = (function () {
   function render(container) {
     rootEl = container;
     if (preview) renderPreview(container);
+    else if (DN.Weekly && DN.Weekly.previewing()) DN.Weekly.renderPreview(container);
     else DN.ScheduleView.render(container);
   }
 

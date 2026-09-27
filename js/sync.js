@@ -70,6 +70,19 @@ DN.Sync = (function () {
     });
   }
 
+  function cleanTimetable(r) {
+    if (!baseOk(r) || !DN.Events.isDate(r.weekStart) || !Array.isArray(r.days)) return null;
+    const days = r.days.slice(0, 7).filter(function (d) { return d && DN.Events.isDate(d.date); }).map(function (d) {
+      return {
+        date: d.date, weekday: str(d.weekday, 2), off: str(d.off, 40), event: str(d.event, 200), supplies: str(d.supplies, 200),
+        periods: (Array.isArray(d.periods) ? d.periods : []).slice(0, 12).map(function (p, i) {
+          return { no: p && p.no >= 1 && p.no <= 12 ? p.no : i + 1, subject: str(p && p.subject, 30), content: str(p && p.content, 300), pages: str(p && p.pages, 60), cont: !!(p && p.cont === true) };
+        }),
+      };
+    });
+    return Object.assign(base(r), { weekStart: r.weekStart, title: str(r.title, 60), weekLabel: str(r.weekLabel, 10), notice: str(r.notice, 3000), fileName: str(r.fileName, 120), days: days });
+  }
+
   // 파일 글 → { obj } 또는 { error }. expectFrom: 이 기기가 받을 수 있는 파일의 보낸 쪽
   function parseFile(text, expectFrom) {
     let obj;
@@ -212,6 +225,7 @@ DN.Sync = (function () {
       events: DN.Store.getAll('events').map(function (e) {
         return Object.assign({}, e, { owner: '', note: '', attachmentIds: [] });
       }),
+      timetables: DN.Store.getAll(DN.Weekly.COL),
     });
     return { obj: obj, filename: '담임노트_일정보내기_' + today().slice(0, 7) + '.json' };
   }
@@ -222,17 +236,19 @@ DN.Sync = (function () {
     const clean = function (arr, f) { return (Array.isArray(arr) ? arr : []).map(f).filter(Boolean); };
     const presets = clean(d.presets, cleanPreset);
     const events = mergeList(DN.Store.getAll('events'), clean(d.events, cleanEvent));
+    const timetables = mergeList(DN.Store.getAll(DN.Weekly.COL), clean(d.timetables, cleanTimetable));
     const s = d.settings || {};
     const settings = {};
     if (s.grade >= 1 && s.grade <= 6) settings.grade = s.grade;
     if (s.classNo >= 1 && s.classNo <= 30) settings.classNo = s.classNo;
     if (s.studentCount >= 1 && s.studentCount <= 60) settings.studentCount = s.studentCount;
     if (s.schoolYear >= 2000 && s.schoolYear <= 2100) settings.schoolYear = s.schoolYear;
-    return { presets: presets, events: events, settings: settings };
+    return { presets: presets, events: events, timetables: timetables, settings: settings };
   }
   function applyPcReceive(obj) {
     const p = planPcReceive(obj);
     const map = { events: p.events.list };
+    map[DN.Weekly.COL] = p.timetables.list;
     if (p.presets.length) map[R.PRE] = p.presets;
     if (!writeAll(map)) return null;
     if (Object.keys(p.settings).length) DN.Settings.save(p.settings);
@@ -303,7 +319,8 @@ DN.Sync = (function () {
       const p = planPcReceive(r.obj);
       const live = p.events.list.filter(function (e) { return !e.deleted; }).length;
       if (!DN.utils.confirmAsk('PC에서 보낸 일정을 받을까요?\n\n· 일정 ' + live + '건 (새로 ' + p.events.added + '건, 갱신 ' + p.events.updated + '건)\n· 관찰 상황 버튼 ' +
-        p.presets.filter(function (x) { return !x.deleted; }).length + '개\n· 학생 수 ' + (p.settings.studentCount || '-') + '명\n\n핸드폰에서 한 기록은 지워지지 않아요.')) return null;
+        p.presets.filter(function (x) { return !x.deleted; }).length + '개\n· 시간표 ' +
+        p.timetables.list.filter(function (x) { return !x.deleted; }).length + '주\n· 학생 수 ' + (p.settings.studentCount || '-') + '명\n\n핸드폰에서 한 기록은 지워지지 않아요.')) return null;
       const res = applyPcReceive(r.obj);
       toast(res ? '일정을 받았어요.' : '저장 공간이 부족해 받지 못했어요.', res ? 'success' : 'error');
       return res;
@@ -326,7 +343,7 @@ DN.Sync = (function () {
         <div class="card">\
           <h2 class="side-title">📤 PC → 핸드폰 : 일정 보내기</h2>\
           <ul class="sync-list">\
-            <li>✅ 학교 일정 ' + events + '건 · 관찰 상황 버튼 · 학년·반·학생 수</li>\
+            <li>✅ 학교 일정 ' + events + '건 · 시간표 ' + DN.Weekly.all().length + '주 · 관찰 상황 버튼 · 학년·반·학생 수</li>\
             <li>🚫 학생 이름 · 담당 교직원 이름 · 일정 메모 · 첨부 파일은 <b>보내지 않아요</b></li>\
           </ul>\
           <button class="btn-primary" id="syPcFile">일정 보내기 파일 만들기</button>\
