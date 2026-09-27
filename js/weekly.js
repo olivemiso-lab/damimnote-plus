@@ -63,7 +63,7 @@ DN.Weekly = (function () {
   }
 
   // ── 2) kordoc 결과 → 한 주 시간표 ──
-  // 결과: { title, weekLabel, weekStart, days: [{ date, weekday, off, event, supplies, periods: [{ no, subject, content, pages, cont }] }], notice }
+  // 결과: { title, weekLabel, weekStart, days: [{ date, weekday, off, event, supplies, periods: [{ no, subject, content, pages, cont }] }] }
   function parse(blocks, opts) {
     opts = opts || {};
     const texts = [];
@@ -184,16 +184,11 @@ DN.Weekly = (function () {
       };
     });
 
-    let notice = '';
-    if (specials.notice !== undefined) {
-      const seen = [];
-      grid[specials.notice].forEach(function (g) { if (g.origin && g.origin.c > 0 && seen.indexOf(g.origin) < 0) seen.push(g.origin); });
-      notice = seen.map(function (o) { return String(o.text).trim(); }).join('\n');
-    }
+    // 가정통신 줄은 시간표에 필요 없어 읽지 않는다 (specials.notice는 다른 줄로 오인하지 않게 표시만)
     const monday = days[0] && days[0].date ? DN.Events.addDays(days[0].date, 1 - (new Date(days[0].date + 'T00:00:00').getDay() || 7)) : '';
     return {
       title: rm ? oneLine(rm[0]) : '', weekLabel: wk ? wk[1] + '주' : '',
-      weekStart: monday, days: days, notice: notice,
+      weekStart: monday, days: days,
     };
   }
 
@@ -211,7 +206,7 @@ DN.Weekly = (function () {
   }
   // 같은 주가 있으면 같은 id로 교체(동기화 id 유지)
   function save(week, fileName) {
-    const rec = { weekStart: week.weekStart, title: week.title, weekLabel: week.weekLabel, days: week.days, notice: week.notice, fileName: fileName || '' };
+    const rec = { weekStart: week.weekStart, title: week.title, weekLabel: week.weekLabel, days: week.days, notice: undefined, fileName: fileName || '' };
     const old = DN.Store.query(COL, function (t) { return t.weekStart === week.weekStart; })[0];
     if (old) return DN.Store.update(COL, old.id, Object.assign(rec, { deleted: false }));
     return DN.Store.add(COL, rec);
@@ -265,7 +260,7 @@ DN.Weekly = (function () {
         (w.days.some(function (d) { return !d.date; }) ? '<p class="pv-warn">날짜를 찾지 못한 요일이 있어요. 맨 위 날짜 칸을 채워 주세요.</p>' : '') + '\
         <p class="pv-help">모든 칸을 고칠 수 있어요. 이어지는 수업(예: 1~2교시 체육)은 연한 색으로 보여요. 쉬는 날 칸에 이름을 적으면 그날은 수업 없음으로 처리돼요.</p>\
         <div class="pv-scroll"><table class="wk-table wk-edit"><thead>' + head + '</thead><tbody id="wkBody">' + body + '</tbody></table></div>' +
-        (w.notice ? '<div class="md-label">가정통신</div><textarea id="wkNotice" rows="4">' + esc(w.notice) + '</textarea>' : '') + '\
+        '\
         <div class="pv-bar" style="margin-top:12px"><span class="pv-spacer"></span>\
           <button class="btn-cancel" id="wkCancel">취소</button><button class="btn-primary" id="wkSave">시간표 등록</button></div>\
       </div>';
@@ -286,8 +281,6 @@ DN.Weekly = (function () {
     container.querySelector('thead').addEventListener('change', onEdit);
     tbody.addEventListener('input', onEdit);
     tbody.addEventListener('change', onEdit);
-    const notice = container.querySelector('#wkNotice');
-    if (notice) notice.addEventListener('input', function () { w.notice = notice.value; });
     container.querySelector('#wkCancel').addEventListener('click', function () {
       if (!confirmAsk('주간학습안내 가져오기를 취소할까요?')) return;
       preview = null;
@@ -329,7 +322,6 @@ DN.Weekly = (function () {
       html += '<tr class="wk-evrow"><th>준비물</th>' + t.days.map(function (d) { return '<td>' + (d.off ? '' : esc(d.supplies)) + '</td>'; }).join('') + '</tr>';
     }
     html += '</tbody></table></div>';
-    if (t.notice) html += '<details class="wk-notice"><summary>가정통신</summary><p>' + esc(t.notice).replace(/\n/g, '<br>') + '</p></details>';
     return html;
   }
 

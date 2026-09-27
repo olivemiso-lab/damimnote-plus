@@ -80,7 +80,7 @@ DN.Sync = (function () {
         }),
       };
     });
-    return Object.assign(base(r), { weekStart: r.weekStart, title: str(r.title, 60), weekLabel: str(r.weekLabel, 10), notice: str(r.notice, 3000), fileName: str(r.fileName, 120), days: days });
+    return Object.assign(base(r), { weekStart: r.weekStart, title: str(r.title, 60), weekLabel: str(r.weekLabel, 10), fileName: str(r.fileName, 120), days: days });
   }
 
   // 파일 글 → { obj } 또는 { error }. expectFrom: 이 기기가 받을 수 있는 파일의 보낸 쪽
