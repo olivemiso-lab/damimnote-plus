@@ -32,7 +32,8 @@ DN.Cloud = (function () {
   function account() { return DN.Store.getMeta('cloudEmail') || ''; }
   function lastSync() { return DN.Store.getMeta('cloudLastSync') || ''; }
   function tokenValid() { return !!(token && token.expires_at > Date.now() + 60000); }
-  function isPhone() { return DN.Settings.get().deviceRole === 'mobile'; }
+  // 핸드폰 화면을 쓰고 있으면 핸드폰으로 동기화한다 (용도 체크를 안 했어도 PC 파일을 덮어쓰지 않도록)
+  function isPhone() { return DN.Settings.get().deviceRole === 'mobile' || !!(DN.Mobile && DN.Mobile.active()); }
   function onChange(fn) { listeners.push(fn); }
   function notify() {
     renderBar();
