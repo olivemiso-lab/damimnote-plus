@@ -5,23 +5,26 @@ window.DN = window.DN || {};
 
 DN.App = (function () {
   const { esc } = DN.utils;
+  // 교사가 실제로 쓰는 흐름 순서: 명단 → 매일 출결 → 관찰 → 자리·모둠 → 학교 일정
   const TABS = [
-    { id: 'schedule', icon: '📅', label: '학교 일정', mod: function () { return DN.Schedule; } },
-    { id: 'observe',  icon: '📝', label: '관찰 기록', mod: function () { return DN.Observe; } },
-    { id: 'attend',   icon: '🗓️', label: '출결 메모', mod: function () { return DN.Attend; } },
     { id: 'students', icon: '👦', label: '학생 관리', mod: function () { return DN.Students; } },
+    { id: 'attend',   icon: '🗓️', label: '출결 메모', mod: function () { return DN.Attend; } },
+    { id: 'observe',  icon: '📝', label: '관찰 기록', mod: function () { return DN.Observe; } },
     { id: 'seating',  icon: '🪑', label: '자리·모둠', mod: function () { return DN.Seating; } },
+    { id: 'schedule', icon: '📅', label: '학교 일정', mod: function () { return DN.Schedule; } },
     { id: 'sync',     icon: '🔄', label: '핸드폰 연결', mod: function () { return DN.Sync; } },
     { id: 'backup',   icon: '💾', label: '백업',      mod: function () { return DN.Backup; } },
     { id: 'settings', icon: '⚙️', label: '설정',      mod: function () { return DN.Settings; } },
   ];
-  let current = 'schedule';
+  // 앱을 열면 마지막으로 보던 메뉴에서 다시 시작 (처음이면 첫 메뉴)
+  let current = DN.Store.getMeta('lastTab') || TABS[0].id;
   let mobileMode = false;
 
   function show(id) {
     if (mobileMode) { DN.Mobile.render(document.getElementById('view')); return; }
     const tab = TABS.find(function (t) { return t.id === id; }) || TABS[0];
     current = tab.id;
+    DN.Store.setMeta('lastTab', current);
     document.querySelectorAll('.nav-btn').forEach(function (b) {
       b.classList.toggle('active', b.dataset.tab === current);
     });
