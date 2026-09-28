@@ -186,8 +186,8 @@ DN.Cloud = (function () {
           if (!phone) {
             const prev = result.received;
             result.received = prev ? {
-              obs: prev.obs + res.obs.added, att: prev.att + res.att.added, done: prev.done + res.doneChanged,
-            } : { obs: res.obs.added, att: res.att.added, done: res.doneChanged };
+              obs: prev.obs + res.obs.added, att: prev.att + res.att.added, done: prev.done + res.doneChanged, ev: prev.ev + res.evAdded + res.evChanged,
+            } : { obs: res.obs.added, att: res.att.added, done: res.doneChanged, ev: res.evAdded + res.evChanged };
           } else {
             result.received = { events: res.events.added + res.events.updated };
           }
@@ -255,7 +255,7 @@ DN.Cloud = (function () {
     return ready.then(function () { return syncOnce(opts); }).then(function (r) {
       busy = false;
       notify();
-      const changed = !!(r && r.received && (isPhone() ? r.received.events : (r.received.obs || r.received.att || r.received.done)));
+      const changed = !!(r && r.received && (isPhone() ? r.received.events : (r.received.obs || r.received.att || r.received.done || r.received.ev)));
       if (fromButton || changed) toast(resultText(r), 'success');
       // 새 기록이 들어왔을 때만 화면을 새로 그린다. 입력 중이면 글자가 날아가지 않게 다음 이동 때 반영
       const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
@@ -271,11 +271,11 @@ DN.Cloud = (function () {
 
   function resultText(r) {
     if (!r) return '';
-    if (!isPhone() && r.otherPc && !(r.received && (r.received.obs || r.received.att || r.received.done))) return '☁️ 핸드폰 기록을 확인했어요 · 새 기록 없음 (다른 PC가 주 PC예요)';
+    if (!isPhone() && r.otherPc && !(r.received && (r.received.obs || r.received.att || r.received.done || r.received.ev))) return '☁️ 핸드폰 기록을 확인했어요 · 새 기록 없음 (다른 PC가 주 PC예요)';
     if (isPhone()) return '☁️ 동기화했어요' + (r.sent ? ' · 기록 ' + r.sent + '건 보냄' : '') + (r.received ? ' · PC 일정 받음' : '');
     const x = r.received;
-    if (!x || !(x.obs || x.att || x.done)) return '☁️ 동기화했어요 · 새 핸드폰 기록 없음';
-    return '☁️ 핸드폰 기록을 받았어요 · ' + [x.obs ? '관찰 ' + x.obs + '건' : '', x.att ? '출결 ' + x.att + '건' : '', x.done ? '완료 체크 ' + x.done + '건' : '']
+    if (!x || !(x.obs || x.att || x.done || x.ev)) return '☁️ 동기화했어요 · 새 핸드폰 기록 없음';
+    return '☁️ 핸드폰 기록을 받았어요 · ' + [x.obs ? '관찰 ' + x.obs + '건' : '', x.att ? '출결 ' + x.att + '건' : '', x.ev ? '일정 ' + x.ev + '건' : '', x.done ? '완료 체크 ' + x.done + '건' : '']
       .filter(Boolean).join(' · ');
   }
 

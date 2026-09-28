@@ -300,27 +300,38 @@ DN.Weekly = (function () {
   }
 
   // ── 5) 보기: PC 한 주 표 · 핸드폰 오늘 목록 ──
-  function weekTableHtml(t, todayStr) {
+  // detail: false(간단히) → 과목 + 학습 내용 두 줄까지, 쪽수 숨김. true(자세히) → 전부
+  function weekTableHtml(t, todayStr, detail) {
     const maxP = t.days.reduce(function (m, d) { return Math.max(m, d.periods.length); }, 0);
-    let html = '<div class="pv-scroll"><table class="wk-table"><thead><tr><th></th>' + t.days.map(function (d) {
+    const todayCls = function (d) { return d.date === todayStr ? ' wk-today' : ''; };
+    let html = '<div class="pv-scroll"><table class="wk-table' + (detail ? ' detail' : ' simple') + '"><colgroup><col class="wk-col-h">' +
+      t.days.map(function () { return '<col>'; }).join('') + '</colgroup><thead><tr><th></th>' + t.days.map(function (d) {
       return '<th class="' + (d.date === todayStr ? 'today' : '') + '">' + esc(d.weekday) + ' <small>' + (d.date ? (+d.date.slice(5, 7)) + '/' + (+d.date.slice(8)) : '') + '</small></th>';
     }).join('') + '</tr></thead><tbody>';
-    if (t.days.some(function (d) { return d.event; })) {
-      html += '<tr class="wk-evrow"><th>행사</th>' + t.days.map(function (d) { return '<td>' + (d.off ? '' : esc(d.event)) + '</td>'; }).join('') + '</tr>';
-    }
+    // 행사·준비물 줄: 날마다 같은 글이면 한 칸으로 합친다
+    const textRow = function (label, key) {
+      const on = t.days.filter(function (d) { return !d.off; });
+      if (!on.some(function (d) { return d[key]; })) return '';
+      const same = on.length > 1 && on.every(function (d) { return d[key] === on[0][key]; });
+      const cell = function (txt, cls, span) {
+        return '<td class="' + cls + '"' + (span ? ' colspan="' + span + '"' : '') + (txt ? ' title="' + esc(txt) + '"' : '') + '><div class="wk-txt">' + esc(txt) + '</div></td>';
+      };
+      if (same && on.length === t.days.length) return '<tr class="wk-evrow"><th>' + label + '</th>' + cell(on[0][key], '', t.days.length) + '</tr>';
+      return '<tr class="wk-evrow"><th>' + label + '</th>' + t.days.map(function (d) { return cell(d.off ? '' : d[key], todayCls(d).trim()); }).join('') + '</tr>';
+    };
+    html += textRow('행사', 'event');
     for (let p = 0; p < maxP; p++) {
       html += '<tr><th>' + (p + 1) + '교시</th>' + t.days.map(function (d) {
         if (d.off) return p === 0 ? '<td class="wk-off" rowspan="' + maxP + '">' + esc(d.off) + '</td>' : '';
         const x = d.periods[p];
-        if (!x || (!x.subject && !x.content)) return '<td></td>';
-        return '<td class="' + (x.cont ? 'wk-cont' : '') + '"><span class="wk-chip subj-' + subjectColor(x.subject) + '">' + esc(x.subject || '—') + '</span>' +
+        if (!x || (!x.subject && !x.content)) return '<td class="' + todayCls(d).trim() + '"></td>';
+        const full = [x.subject, x.content, x.pages].filter(Boolean).join(' · ');
+        return '<td class="' + (x.cont ? 'wk-cont' : '') + todayCls(d) + '" title="' + esc(full) + '"><span class="wk-chip subj-' + subjectColor(x.subject) + '">' + esc(x.subject || '—') + '</span>' +
           (x.content && !x.cont ? '<div class="wk-content">' + esc(x.content) + '</div>' : '') +
-          (x.pages && !x.cont ? '<div class="wk-pages-t">' + esc(x.pages) + '</div>' : '') + '</td>';
+          (detail && x.pages && !x.cont ? '<div class="wk-pages-t">' + esc(x.pages) + '</div>' : '') + '</td>';
       }).join('') + '</tr>';
     }
-    if (t.days.some(function (d) { return d.supplies; })) {
-      html += '<tr class="wk-evrow"><th>준비물</th>' + t.days.map(function (d) { return '<td>' + (d.off ? '' : esc(d.supplies)) + '</td>'; }).join('') + '</tr>';
-    }
+    html += textRow('준비물', 'supplies');
     html += '</tbody></table></div>';
     return html;
   }

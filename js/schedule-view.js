@@ -132,6 +132,13 @@ DN.ScheduleView = (function () {
     c.querySelector('#vCal').addEventListener('click', function () { state.mode = 'calendar'; saveState(); render(c); });
     c.querySelector('#vList').addEventListener('click', function () { state.mode = 'list'; saveState(); render(c); });
     c.querySelector('#vTime').addEventListener('click', function () { state.mode = 'timetable'; saveState(); render(c); });
+    const wkMode = c.querySelector('#wkMode');
+    if (wkMode) wkMode.addEventListener('click', function (e) {
+      const b = e.target.closest('[data-wk]');
+      if (!b) return;
+      DN.Store.setMeta('wkDetail', b.dataset.wk);
+      render(c);
+    });
     const del = c.querySelector('#wkDelete');
     if (del) del.addEventListener('click', function () {
       if (!confirmAsk('이 주 시간표를 지울까요? 주간학습안내를 다시 가져오면 되살릴 수 있어요.')) return;
@@ -230,9 +237,12 @@ DN.ScheduleView = (function () {
       return '<div class="empty wk-empty">' + esc(md(mon) + ' ~ ' + md(E.addDays(mon, 4))) + ' 주의 시간표가 없어요.<br>' +
         '<small>위의 [주간학습안내 가져오기]로 한글 파일(.hwp, .hwpx)을 올리면 시간표가 만들어져요.</small></div>';
     }
+    const detail = DN.Store.getMeta('wkDetail') === '1';
     return '<div class="wk-head"><b>' + esc([t.title, t.weekLabel].filter(Boolean).join(' · ')) + '</b>' +
-      '<span class="pv-spacer"></span><button class="btn-ghost side-add" id="wkDelete" data-id="' + esc(t.id) + '">이 주 시간표 지우기</button></div>' +
-      DN.Weekly.weekTableHtml(t, today());
+      '<span class="pv-spacer"></span><span class="seg" id="wkMode"><button data-wk="0" aria-pressed="' + !detail + '">간단히</button>' +
+      '<button data-wk="1" aria-pressed="' + detail + '">자세히</button></span>' +
+      '<button class="btn-ghost side-add" id="wkDelete" data-id="' + esc(t.id) + '">이 주 시간표 지우기</button></div>' +
+      DN.Weekly.weekTableHtml(t, today(), detail);
   }
 
   // ── 목록 ──

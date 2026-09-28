@@ -256,7 +256,8 @@ DN.Mobile = (function () {
     return '<li class="m-ev' + (e.kind === 'holiday' ? ' hol' : '') + (e.isMine ? ' mine' : '') + (e.done ? ' done' : '') + '">' +
       (task ? '<button class="chk' + (e.done ? ' on' : '') + '" data-done="' + esc(e.id) + '" aria-label="' + (e.done ? '완료 취소' : '완료') + '">' + (e.done ? '✓' : '') + '</button>' : '<span class="chk-sp"></span>') +
       '<span class="m-ev-t">' + (e.isMine ? '★ ' : '') + (e.kind === 'deadline' ? '[마감] ' : '') + esc(e.title) +
-      (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span></li>';
+      (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span>' +
+      (e.source === 'mobile' ? '<button class="m-ev-del" data-evdel="' + esc(e.id) + '" aria-label="일정 지우기">✕</button>' : '') + '</li>';
   }
   function renderHome(body) {
     const d = st.date;
@@ -270,7 +271,8 @@ DN.Mobile = (function () {
     }
     const grade = DN.Settings.get().grade;
     body.innerHTML = homeInstallCard() +
-      '<section class="m-card"><h2>' + (d === today() ? '오늘' : mdw(d)) + ' <small>' + (d === today() ? mdw(d) : '') + '</small></h2>' +
+      '<section class="m-card"><h2>' + (d === today() ? '오늘' : mdw(d)) + ' <small>' + (d === today() ? mdw(d) : '') + '</small>' +
+        '<button class="m-ev-add" id="mEvAdd">＋ 일정</button></h2>' +
         (todays.length ? '<ul class="m-list">' + todays.map(evLine).join('') + '</ul>' : '<p class="m-empty">일정이 없어요.</p>') + '</section>' +
       (DN.Weekly.forDate(d) ? '<section class="m-card"><h2>🕘 ' + (d === today() ? '오늘' : mdw(d)) + ' 시간표</h2>' + DN.Weekly.dayListHtml(DN.Weekly.forDate(d)) + '</section>' : '') +
       '<div class="m-actions">' +
@@ -283,15 +285,51 @@ DN.Mobile = (function () {
             '<ul class="m-list">' + x.list.map(evLine).join('') + '</ul></div>';
         }).join('') : '<p class="m-empty">이번 주 일정이 없어요. PC에서 [일정 보내기]로 받을 수 있어요.</p>') + '</section>';
     bindInstall(body);
+    body.querySelector('#mEvAdd').addEventListener('click', openEventAdd);
     body.querySelector('#mGoObs').addEventListener('click', function () { go('obs'); });
     body.querySelector('#mGoAtt').addEventListener('click', function () { go('att'); });
     body.addEventListener('click', function (e) {
+      const del = e.target.closest('[data-evdel]');
+      if (del) {
+        const ev0 = E.get(del.dataset.evdel);
+        if (!ev0 || !DN.utils.confirmAsk('“' + ev0.title + '” 일정을 지울까요?')) return;
+        E.remove(ev0.id);
+        toast('일정을 지웠어요.', 'info');
+        render(rootEl);
+        if (DN.Cloud) DN.Cloud.soon();
+        return;
+      }
       const b = e.target.closest('[data-done]');
       if (!b) return;
       const ev = E.get(b.dataset.done);
       if (!ev) return;
       E.update(ev.id, { done: !ev.done });
       toast(ev.done ? '완료 표시를 풀었어요.' : '완료!', 'success');
+      render(rootEl);
+      if (DN.Cloud) DN.Cloud.soon();
+    });
+  }
+
+  // ── 핸드폰에서 일정 넣기 (갑자기 잡힌 회의 등) → 동기화로 PC에도 ──
+  function openEventAdd() {
+    const body = '<div class="fgrid">' +
+      '<label for="meDate">날짜</label><input type="date" id="meDate" value="' + esc(st.date) + '">' +
+      '<label for="meTitle">일정</label><input type="text" id="meTitle" maxlength="60" placeholder="예: 학년 협의회">' +
+      '<label for="meTime">시간</label><input type="time" id="meTime">' +
+      '<label for="mePlace">장소</label><input type="text" id="mePlace" maxlength="30" placeholder="(선택)">' +
+      '</div><p class="set-help">PC와 구글로 연결돼 있으면 PC 학교 일정에도 들어가요.</p>';
+    const m = openModal('일정 넣기', body, '<span class="pv-spacer"></span><button class="btn-cancel" data-close>닫기</button><button class="btn-primary" id="meSave">저장</button>');
+    const title = m.querySelector('#meTitle');
+    title.focus();
+    m.querySelector('#meSave').addEventListener('click', function () {
+      const date = m.querySelector('#meDate').value;
+      const t = title.value.trim();
+      if (!E.isDate(date)) { toast('날짜를 골라 주세요.', 'info'); return; }
+      if (!t) { toast('일정 이름을 써 주세요.', 'info'); title.focus(); return; }
+      const saved = E.create({ date: date, title: t, time: m.querySelector('#meTime').value, place: m.querySelector('#mePlace').value.trim(), isMine: true, source: 'mobile' });
+      if (!saved) { toast('저장하지 못했어요.', 'error'); return; }
+      closeModal();
+      toast((+date.slice(5, 7)) + '/' + (+date.slice(8)) + ' ' + t + ' 일정을 넣었어요.', 'success');
       render(rootEl);
       if (DN.Cloud) DN.Cloud.soon();
     });

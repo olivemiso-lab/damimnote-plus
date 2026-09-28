@@ -711,6 +711,9 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .m-card { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
 .m-card h2 { font-size: 15.5px; font-weight: 900; margin-bottom: 8px; }
 .m-card h2 small { font-size: 12px; font-weight: 700; color: var(--ink-sub); margin-left: 4px; }
+.m-card h2 { display: flex; align-items: center; gap: 4px; }
+.m-ev-add { margin-left: auto; border: 1.5px solid var(--peach-mid); background: var(--peach-bg); color: var(--peach-ink); border-radius: var(--pill); padding: 5px 12px; font-size: 13px; font-weight: 900; }
+.m-ev-del { border: none; background: none; color: var(--ink-sub); font-size: 13px; padding: 2px 6px; }
 .m-empty { font-size: 13px; color: var(--ink-sub); padding: 4px 0; }
 .m-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .m-ev { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }
@@ -824,6 +827,13 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .wk-table tbody th { width: 58px; background: var(--soft); text-align: center; vertical-align: middle; font-size: 12px; color: var(--ink-sub); }
 .wk-chip { display: inline-block; border: 1px solid transparent; border-radius: 999px; padding: 1px 10px; font-size: 12.5px; font-weight: 900; }
 .wk-content { margin-top: 3px; line-height: 1.45; }
+.wk-table col.wk-col-h { width: 56px; }
+.wk-table td.wk-today { background: #fffaf4; }
+/* 간단히: 학습 내용은 두 줄까지, 행사·준비물은 한 줄 (마우스를 올리면 전체) */
+.wk-table.simple td { padding: 6px 7px; }
+.wk-table.simple .wk-content { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--ink-sub); font-size: 12px; }
+.wk-table.simple .wk-evrow .wk-txt { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.wk-table.detail .wk-evrow .wk-txt { white-space: normal; }
 .wk-pages-t { margin-top: 2px; font-size: 11px; color: var(--ink-sub); }
 .wk-cont { background: #fcfaf7; }
 .wk-cont .wk-chip { opacity: 0.55; }
@@ -929,56 +939,85 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 
 /* ════════════════════════════════════════════════════
    화면 스타일 (⚙️ 설정에서 고름, 기기마다 따로) — 기본은 위의 “귀여운”(파스텔)
-   html[data-look="simple"] : 흰 바탕 + 파랑 한 가지, 각진 버튼
-   html[data-look="chic"]   : 모노톤(검정·회색), 어두운 사이드바
+   sky 맑은 하늘 · mint 민트 · black 블랙&오렌지 · navy 네이비 — 모두 흰 바탕에 또렷한 색 하나
    ════════════════════════════════════════════════════ */
-html[data-look="simple"] {
-  --canvas: #f5f7fa;  --paper: #ffffff;  --side: #ffffff;  --soft: #f2f4f7;
-  --ink: #1f2933;     --ink-sub: #66727f; --line: #e3e7ec; --line-strong: #d0d6de;
-  --peach-bg: #e8f0fe; --peach-ink: #1a56c4; --peach-mid: #c6d8fb;
-  --sky-bg: #eef2f6;   --sky-ink: #34506e;   --sky-mid: #d2dce7;
-  --mint-bg: #e6f4ed;  --mint-ink: #1d6a46;
-  --lemon-bg: #faf4df; --lemon-ink: #735808; --lemon-mid: #ecdba0;
-  --lilac-bg: #eeedf6; --lilac-ink: #4b4784;
-  --pink-bg: #f8edf0;  --pink-ink: #963350;
-  --rose-bg: #fbeeee;  --danger: #c63f3a;
-  --brand: #1a56c4;
-  --radius: 10px; --pill: 8px;
-  --shadow: 0 1px 3px rgba(20, 30, 45, 0.06);
+/* 맑은 하늘 (흰 바탕 + 밝은 파랑) */
+html[data-look="sky"] {
+  --canvas: #ffffff; --paper: #ffffff; --side: #f4f8ff; --soft: #f5f8fc;
+  --ink: #1d2433; --ink-sub: #667085; --line: #e6ebf2; --line-strong: #d3dbe6;
+  --peach-bg: #e8f1ff; --peach-ink: #1f63c6; --peach-mid: #c9ddff;
+  --sky-bg: #e8f1ff; --sky-ink: #1f63c6; --sky-mid: #c9ddff;
+  --mint-bg: #e5f7ee; --mint-ink: #12824d;
+  --lemon-bg: #fff5d1; --lemon-ink: #8a6200; --lemon-mid: #ffe28a;
+  --lilac-bg: #efebff; --lilac-ink: #5a3fc0; --pink-bg: #ffecf1; --pink-ink: #b0325a;
+  --rose-bg: #ffeeee; --danger: #d9362f; --brand: #2f80ed; --radius: 14px; --pill: 10px;
+  --shadow: 0 1px 3px rgba(30, 60, 120, 0.06);
 }
-html[data-look="chic"] {
-  --canvas: #f3f2ef;  --paper: #ffffff;  --side: #1c1c1c;  --soft: #f5f4f1;
-  --ink: #171717;     --ink-sub: #6b6966; --line: #e5e3df; --line-strong: #d2cfc9;
-  --peach-bg: #ebe9e5; --peach-ink: #171717; --peach-mid: #d6d2cb;
-  --sky-bg: #f0efec;   --sky-ink: #3a3a3a;   --sky-mid: #d9d6d0;
-  --mint-bg: #e8eee9;  --mint-ink: #2e5a3f;
-  --lemon-bg: #f3efe3; --lemon-ink: #5e4d1c; --lemon-mid: #ddd3b6;
-  --lilac-bg: #ecebf0; --lilac-ink: #45425a;
-  --pink-bg: #f1e9ea;  --pink-ink: #7a3443;
-  --rose-bg: #f5eaea;  --danger: #b0322e;
-  --brand: #171717;
-  --radius: 6px; --pill: 4px;
-  --shadow: none;
+html[data-look="sky"] .btn-primary { background: #2f80ed; color: #fff; border-color: #2f80ed; }
+html[data-look="sky"] .nav-btn.active { background: #2f80ed; color: #fff; }
+html[data-look="sky"] .nav-btn:hover { background: #e8f1ff; }
+html[data-look="sky"] .sidebar { border-right-color: #e6ebf2; }
+
+/* 민트 (흰 바탕 + 청록) */
+html[data-look="mint"] {
+  --canvas: #ffffff; --paper: #ffffff; --side: #f2fbf8; --soft: #f4f9f7;
+  --ink: #1c2a27; --ink-sub: #62716d; --line: #e3eeea; --line-strong: #cfe0da;
+  --peach-bg: #ffefe4; --peach-ink: #c2521c; --peach-mid: #ffd6bd;
+  --sky-bg: #e6f4ff; --sky-ink: #1d65a6; --sky-mid: #c4e2fb;
+  --mint-bg: #dff7ef; --mint-ink: #0e7a5f;
+  --lemon-bg: #fff6d6; --lemon-ink: #876100; --lemon-mid: #ffe391;
+  --lilac-bg: #efebff; --lilac-ink: #5a3fc0; --pink-bg: #ffecf1; --pink-ink: #b0325a;
+  --rose-bg: #ffeeee; --danger: #d9362f; --brand: #0fa37f; --radius: 14px; --pill: 10px;
+  --shadow: 0 1px 3px rgba(20, 90, 70, 0.06);
 }
-/* 심플·시크: 파스텔 칠 대신 또렷한 주 버튼 */
-html[data-look="simple"] .btn-primary { background: #1a56c4; color: #fff; border-color: #1a56c4; }
-html[data-look="simple"] .btn-primary:hover { background: #1647a3; }
-html[data-look="chic"] .btn-primary { background: #171717; color: #fff; border-color: #171717; }
-html[data-look="chic"] .btn-primary:hover { background: #333; }
-html[data-look="simple"] .nav-btn:hover { background: var(--soft); }
-html[data-look="simple"] .nav-btn.active { background: #e8f0fe; color: #1a56c4; }
-html[data-look="simple"] .brand, html[data-look="chic"] .brand { border-bottom-style: solid; border-bottom-width: 1px; }
-html[data-look="simple"] .m-card, html[data-look="chic"] .m-card,
-html[data-look="simple"] .modal, html[data-look="chic"] .modal { border-radius: var(--radius); }
-/* 시크: 어두운 사이드바 */
-html[data-look="chic"] .sidebar { border-right-color: #1c1c1c; }
-html[data-look="chic"] .brand { border-bottom-color: #3a3a3a; }
-html[data-look="chic"] .brand-title, html[data-look="chic"] .brand-title .plus { color: #fff; }
-html[data-look="chic"] .brand-sub, html[data-look="chic"] .side-foot { color: #8f8c88; }
-html[data-look="chic"] .nav-btn { color: #b5b2ad; }
-html[data-look="chic"] .nav-btn:hover { background: #2c2c2c; color: #fff; }
-html[data-look="chic"] .nav-btn.active { background: #fff; color: #171717; }
-html[data-look="chic"] .nav-ic { filter: grayscale(1); }
+html[data-look="mint"] .btn-primary { background: #0fa37f; color: #fff; border-color: #0fa37f; }
+html[data-look="mint"] .nav-btn.active { background: #0fa37f; color: #fff; }
+html[data-look="mint"] .nav-btn:hover { background: #dff7ef; }
+html[data-look="mint"] .sidebar { border-right-color: #e3eeea; }
+
+/* 블랙&오렌지 (흰 바탕, 검정 글씨, 주황 포인트) */
+html[data-look="black"] {
+  --canvas: #fafafa; --paper: #ffffff; --side: #ffffff; --soft: #f5f5f5;
+  --ink: #111111; --ink-sub: #6b6b6b; --line: #ebebeb; --line-strong: #dadada;
+  --peach-bg: #fff0e6; --peach-ink: #d8570f; --peach-mid: #ffd3b8;
+  --sky-bg: #eaf3ff; --sky-ink: #1e5fb8; --sky-mid: #cfe2fb;
+  --mint-bg: #e6f6ec; --mint-ink: #1a7a45;
+  --lemon-bg: #fff4d4; --lemon-ink: #8a6100; --lemon-mid: #ffe08a;
+  --lilac-bg: #f0ebff; --lilac-ink: #5a3fc0; --pink-bg: #ffecf1; --pink-ink: #b0325a;
+  --rose-bg: #ffeeee; --danger: #d9362f; --brand: #111111; --radius: 12px; --pill: 8px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+html[data-look="black"] .btn-primary { background: #111; color: #fff; border-color: #111; }
+html[data-look="black"] .brand-title .plus { color: #ff6b2c; }
+html[data-look="black"] .nav-btn.active { background: #111; color: #fff; }
+html[data-look="black"] .nav-btn:hover { background: #f2f2f2; }
+html[data-look="black"] .sidebar { border-right-color: #ebebeb; }
+
+/* 네이비 (흰 바탕 + 남색 메뉴 + 노랑 포인트) */
+html[data-look="navy"] {
+  --canvas: #f7f9fc; --paper: #ffffff; --side: #1e3a6e; --soft: #f3f6fb;
+  --ink: #1a2440; --ink-sub: #62708a; --line: #e3e9f2; --line-strong: #cfd9e8;
+  --peach-bg: #fff4d1; --peach-ink: #7a5500; --peach-mid: #ffe08a;
+  --sky-bg: #e8f0ff; --sky-ink: #1e4fa8; --sky-mid: #c8dafc;
+  --mint-bg: #e3f6ec; --mint-ink: #157a47;
+  --lemon-bg: #fff4d1; --lemon-ink: #7a5500; --lemon-mid: #ffe08a;
+  --lilac-bg: #efebff; --lilac-ink: #5a3fc0; --pink-bg: #ffecf1; --pink-ink: #b0325a;
+  --rose-bg: #ffeeee; --danger: #d9362f; --brand: #1e3a6e; --radius: 14px; --pill: 10px;
+  --shadow: 0 1px 3px rgba(30, 58, 110, 0.07);
+}
+html[data-look="navy"] .btn-primary { background: #ffc933; color: #1a2440; border-color: #ffc933; }
+html[data-look="navy"] .sidebar { border-right-color: #1e3a6e; }
+html[data-look="navy"] .brand { border-bottom-color: rgba(255, 255, 255, 0.15); border-bottom-style: solid; border-bottom-width: 1px; }
+html[data-look="navy"] .brand-title { color: #fff; }
+html[data-look="navy"] .brand-title .plus { color: #ffc933; }
+html[data-look="navy"] .brand-sub, html[data-look="navy"] .side-foot { color: #a9b8d6; }
+html[data-look="navy"] .nav-btn { color: #d5deef; }
+html[data-look="navy"] .nav-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+html[data-look="navy"] .nav-btn.active { background: #ffc933; color: #1a2440; }
+
+/* 상황 버튼 무리 색: 참여 하늘 · 관계 초록 · 태도 노랑 */
+html[data-look] .preset-group:nth-child(1) .preset-btn, html[data-look] .m-preset-g:nth-of-type(1) .preset-btn { background: var(--sky-bg); color: var(--sky-ink); border-color: var(--sky-mid); }
+html[data-look] .preset-group:nth-child(2) .preset-btn, html[data-look] .m-preset-g:nth-of-type(2) .preset-btn { border-color: #c9ecd8; }
 
 /* 설정: 스타일 고르기 */
 .look-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 6px; }

@@ -68,7 +68,7 @@ DN.Sync = (function () {
       grades: arr(r.grades, function (g) { return g >= 1 && g <= 6 && g % 1 === 0; }),
       classes: arr(r.classes, function (x) { return typeof x === 'string' && /^\d-\d{1,2}$/.test(x); }),
       kind: EVENT_KINDS.indexOf(r.kind) >= 0 ? r.kind : 'event', done: r.done === true,
-      source: r.source === 'manual' ? 'manual' : 'together', importKey: str(r.importKey, 10), seriesKey: str(r.seriesKey, 200),
+      source: r.source === 'manual' || r.source === 'mobile' ? r.source : 'together', importKey: str(r.importKey, 10), seriesKey: str(r.seriesKey, 200),
       note: '', attachmentIds: [], needsReview: r.needsReview === true,
     });
   }
@@ -152,6 +152,8 @@ DN.Sync = (function () {
       observations: pick(R.OBS),
       attendance: pick(R.ATT),
       eventDone: events.filter(function (e) { return !e.deleted; }).map(function (e) { return { id: e.id, done: !!e.done, updatedAt: e.updatedAt }; }),
+      // 핸드폰에서 새로 넣은 일정(지운 것 포함) — 회의처럼 갑자기 생긴 일정
+      events: events.filter(function (e) { return e.source === 'mobile'; }),
     });
     return { obj: obj, filename: '담임노트_핸드폰기록_' + today() + '.json' };
   }
@@ -189,9 +191,16 @@ DN.Sync = (function () {
       events[i] = Object.assign({}, events[i], { done: x.done === true, updatedAt: x.updatedAt });
       doneChanged++;
     });
+    // 핸드폰에서 넣은 일정: 핸드폰이 만든 것만 받는다 (PC 일정을 핸드폰이 바꾸지 못하게)
+    const mobileEv = clean(d.events, cleanEvent).filter(function (e) {
+      if (e.source !== 'mobile') return false;
+      const cur = events.find(function (x) { return x.id === e.id; });
+      return !cur || cur.source === 'mobile';
+    });
+    const ev = mergeList(events, mobileEv);
     const rawCount = (Array.isArray(d.observations) ? d.observations.length : 0) + (Array.isArray(d.attendance) ? d.attendance.length : 0);
     return {
-      obs: obs, att: att, events: events, doneChanged: doneChanged,
+      obs: obs, att: att, events: ev.list, evAdded: ev.added, evChanged: ev.updated + ev.removed, doneChanged: doneChanged,
       invalid: rawCount - obsIn.length - attIn.length,
     };
   }
@@ -201,6 +210,8 @@ DN.Sync = (function () {
     if (p.att.added) parts.push('출결 ' + p.att.added + '건 추가');
     if (p.obs.updated + p.att.updated) parts.push('고친 기록 ' + (p.obs.updated + p.att.updated) + '건 갱신');
     if (p.obs.removed + p.att.removed) parts.push('지운 기록 ' + (p.obs.removed + p.att.removed) + '건 반영');
+    if (p.evAdded) parts.push('핸드폰 일정 ' + p.evAdded + '건 추가');
+    if (p.evChanged) parts.push('핸드폰 일정 ' + p.evChanged + '건 갱신');
     if (p.doneChanged) parts.push('완료 체크 ' + p.doneChanged + '건 갱신');
     parts.push('중복 ' + (p.obs.skipped + p.att.skipped) + '건 건너뜀');
     if (p.invalid) parts.push('형식이 맞지 않는 ' + p.invalid + '건 제외');
