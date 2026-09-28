@@ -399,6 +399,8 @@ DN.Sync = (function () {
       (C.linked() ? '<span class="cloud-on">연결됨</span>' : '') + '</div>' +
       (C.linked()
         ? '<p class="cloud-acct">' + esc(C.account() || '구글 계정') + '</p><p class="set-help" style="margin-top:0">' + esc(C.statusText()) + '</p>' +
+          (C.otherPc() ? '<p class="notice small">💻 다른 PC가 주 PC예요. 이 PC는 핸드폰 기록을 받기만 하고, 핸드폰에는 일정을 보내지 않아요. ' +
+            '<button class="btn-ghost" id="cloudTake">이 PC를 주 PC로</button></p>' : '') +
           '<div class="pv-bar"><button class="btn-primary" id="cloudSync"' + (C.isBusy() ? ' disabled' : '') + '>지금 동기화</button>' +
           '<span class="pv-spacer"></span><button class="btn-cancel" id="cloudOff">연결 끊기</button></div>'
         : '<ul class="sync-list">' +
@@ -410,6 +412,8 @@ DN.Sync = (function () {
     if (on) on.addEventListener('click', function () { C.connect().then(renderCloud); });
     const s = box.querySelector('#cloudSync');
     if (s) s.addEventListener('click', function () { C.sync(true).then(function () { if (rootEl && rootEl.isConnected) renderCloud(); }); });
+    const take = box.querySelector('#cloudTake');
+    if (take) take.addEventListener('click', function () { C.askTakeover().then(function () { if (rootEl && rootEl.isConnected) renderCloud(); }); });
     const off = box.querySelector('#cloudOff');
     if (off) off.addEventListener('click', function () {
       if (!DN.utils.confirmAsk('구글 드라이브 연결을 끊을까요? 이 PC의 기록은 그대로 남아요.')) return;
