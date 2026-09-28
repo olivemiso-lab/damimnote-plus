@@ -14,10 +14,24 @@ DN.Records = (function () {
   const REASONS = ['질병', '미인정', '출석인정', '기타'];
   // 기본 관찰 상황 (명세 §5 — 관찰된 행동 중심 문구)
   const DEFAULT_PRESETS = [
-    ['참여', '발표·질문'], ['참여', '새로운 생각 제시'], ['참여', '끝까지 해결 시도'],
-    ['관계', '친구 도움'], ['관계', '모둠 활동 조율'], ['관계', '갈등 조정 필요'],
-    ['태도', '과제 성실'], ['태도', '과제 미제출'], ['태도', '수업 집중 어려움'], ['태도', '규칙 지키기'],
+    // 핸드폰에서 한눈에 보이도록 무리마다 잘한 행동·걱정되는 행동을 몇 개씩만. 나머지는 메모나 교사가 추가
+    ['참여', '발표·질문'], ['참여', '새로운 생각 제시'], ['참여', '끝까지 해결 시도'], ['참여', '모둠 토의 이끎'],
+    ['관계', '친구 도움'], ['관계', '친구 배려·양보'],
+    ['관계', '친구와 다툼'], ['관계', '거친 말 사용'], ['관계', '친구 놀림'], ['관계', '혼자 있는 시간 많음'],
+    ['태도', '과제 성실'], ['태도', '맡은 일 책임감'],
+    ['태도', '과제 미제출'], ['태도', '준비물 미준비'], ['태도', '수업 집중 어려움'], ['태도', '친구 활동 방해'],
   ];
+  // 교사가 만든 버튼도 이 낱말이 들어가면 갈등 상황으로 본다
+  const CONFLICT_RE = /다툼|다퉜|싸움|싸웠|싸운|갈등|놀림|놀렸|놀리|거친 말|욕설|욕을|욕함|때림|때렸|때리|밀침|밀쳤|괴롭/;
+  // 직접 쓴 글에서 “7번”처럼 적힌 학생 번호
+  function mentionedNos(text) {
+    const out = [];
+    String(text || '').replace(/(\d{1,2})\s*번/g, function (m, n) { n = +n; if (n >= 1 && n <= 99 && out.indexOf(n) < 0) out.push(n); return m; });
+    return out;
+  }
+  function isConflictLabel(label) { return CONFLICT_RE.test(String(label || '')); }
+  // 기본 버튼 판 번호 — 기본 버튼을 늘리면 올린다. 이미 쓰던 사람에게는 없는 문구만 무리 끝에 덧붙인다
+  const PRESET_SET = 3;
 
   function alive(r) { return !r.deleted; }
   function byDateNo(a, b) {
@@ -54,9 +68,34 @@ DN.Records = (function () {
     let all = DN.Store.getAll(PRE);
     if (!all.length) {
       DN.Store.batch(PRE, { add: DEFAULT_PRESETS.map(function (p, i) { return { group: p[0], label: p[1], order: i + 1 }; }) });
+      DN.Store.setMeta('presetSet', String(PRESET_SET));
+      all = DN.Store.getAll(PRE);
+    } else if ((+DN.Store.getMeta('presetSet') || 1) < PRESET_SET) {
+      addNewDefaults(all);
       all = DN.Store.getAll(PRE);
     }
     return all.filter(alive).sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+  }
+  // 새 기본 문구를 같은 무리 끝에 넣고 순서를 1부터 다시 매긴다. 교사가 지운 문구(툼스톤)는 되살리지 않는다
+  function addNewDefaults(all) {
+    const known = {};
+    all.forEach(function (p) { known[p.label] = true; });
+    const list = all.filter(alive).sort(function (a, b) { return (a.order || 0) - (b.order || 0); })
+      .map(function (p) { return { id: p.id, group: p.group }; });
+    DEFAULT_PRESETS.forEach(function (d) {
+      if (known[d[1]]) return;
+      let at = -1;
+      list.forEach(function (p, i) { if (p.group === d[0]) at = i; });
+      const item = { group: d[0], label: d[1] };
+      if (at < 0) list.push(item); else list.splice(at + 1, 0, item);
+    });
+    const add = [], update = [];
+    list.forEach(function (p, i) {
+      if (p.id) update.push({ id: p.id, patch: { order: i + 1 } });
+      else add.push({ group: p.group, label: p.label, order: i + 1 });
+    });
+    if (add.length) DN.Store.batch(PRE, { add: add, update: update });
+    DN.Store.setMeta('presetSet', String(PRESET_SET));
   }
   function presetGroups() {
     const groups = [];
@@ -86,10 +125,16 @@ DN.Records = (function () {
 
   // ── 관찰 기록 ──
   // 여러 학생에게 같은 상황을 한 번에 기록. label은 저장 시점의 버튼 문구를 그대로 복사
+  // 다툼·놀림 같은 갈등 상황을 여러 명 함께 고르면 서로 “함께(with)”로 묶어 둔다 → 자리·모둠에서 떼어 놓기 추천
   function addObservations(date, nos, preset, memo) {
     const dev = device();
+    // 함께 고른 학생 + 직접 쓴 글의 “7번” (갈등 상황일 때만)
+    const others = isConflictLabel(preset.label) ? nos.concat(mentionedNos(preset.label)) : [];
     return DN.Store.batch(OBS, { add: nos.map(function (no) {
-      return { date: date, studentNo: no, presetId: preset.id, label: preset.label, memo: memo || '', device: dev };
+      const r = { date: date, studentNo: no, presetId: preset.id, label: preset.label, memo: memo || '', device: dev };
+      const w = others.filter(function (x, i) { return x !== no && others.indexOf(x) === i; });
+      if (w.length) r.with = w;
+      return r;
     }) }) || [];
   }
   function updateObservation(id, patch) { return DN.Store.update(OBS, id, patch); }
@@ -108,13 +153,43 @@ DN.Records = (function () {
     return out;
   }
   // 상황별 개수 [{ label, group, count }] — 무리는 현재 버튼 기준(버튼이 없어졌으면 '기타')
+  // 버튼에 없는 내용을 직접 써서 기록 (예: 5번 → “7번 학생을 때림”). 글이 곧 상황 문구가 된다
+  function addFreeObservations(date, nos, text) {
+    const t = String(text || '').trim().slice(0, 60);
+    if (!t) return [];
+    return addObservations(date, nos, { id: '', label: t }, '');
+  }
+
+  // 관찰 기록에서 함께 다툰 두 학생 쌍: [{ a, b, count, last, labels }] (a < b, 많이·최근 순)
+  function conflictPairs() {
+    const map = {}, seen = {};
+    observations().forEach(function (r) {
+      if (!Array.isArray(r.with) || !isConflictLabel(r.label)) return;
+      r.with.forEach(function (o) {
+        const a = Math.min(r.studentNo, o), b = Math.max(r.studentNo, o);
+        if (a === b) return;
+        const k = a + '-' + b;
+        // 함께 골라 저장한 한 번의 기록은 두 학생 모두에게 남으므로 한 번만 센다
+        const once = k + '|' + r.date + '|' + r.label + '|' + r.createdAt;
+        if (seen[once]) return;
+        seen[once] = true;
+        const e = map[k] || (map[k] = { a: a, b: b, count: 0, last: '', labels: [] });
+        e.count++;
+        if (r.date > e.last) e.last = r.date;
+        if (e.labels.indexOf(r.label) < 0) e.labels.push(r.label);
+      });
+    });
+    return Object.keys(map).map(function (k) { return map[k]; })
+      .sort(function (x, y) { return (y.count - x.count) || (y.last > x.last ? 1 : y.last < x.last ? -1 : 0); });
+  }
+
   function countByLabel(list) {
     const groupOf = {};
     DN.Store.getAll(PRE).forEach(function (p) { groupOf[p.id] = p.group; });
     const map = {};
     list.forEach(function (r) {
       const k = r.label;
-      if (!map[k]) map[k] = { label: k, group: groupOf[r.presetId] || '기타', count: 0 };
+      if (!map[k]) map[k] = { label: k, group: groupOf[r.presetId] || (r.presetId ? '기타' : '직접'), count: 0 };
       map[k].count++;
     });
     return Object.keys(map).map(function (k) { return map[k]; })
@@ -212,7 +287,8 @@ DN.Records = (function () {
     TYPES, TYPE_ABBR, REASONS, DEFAULT_PRESETS,
     studentNumbers, nameMap, label,
     presets, presetGroups, addPreset, updatePreset, removePreset, movePreset,
-    addObservations, updateObservation, removeRecords, observations, countByStudent, countByLabel, copyText,
+    addObservations, addFreeObservations, updateObservation, removeRecords, observations, countByStudent, countByLabel, copyText,
+    isConflictLabel, conflictPairs,
     saveAttendance, updateAttendance, attendance, monthRange, monthSummary, summaryText, termRange,
     unsentRecords, unsentCount,
     OBS, ATT, PRE,

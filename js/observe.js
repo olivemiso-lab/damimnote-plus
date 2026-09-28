@@ -52,6 +52,9 @@ DN.Observe = (function () {
             : '<button type="button" class="pv-addend" id="obMemoOpen">+ 메모 덧붙이기</button>') + '\
         </div>\
         <div id="obPresetBtns" class="preset-groups"></div>\
+        <div class="free-row"><span class="preset-gname">직접</span>\
+          <input type="text" id="obFree" maxlength="60" placeholder="버튼에 없는 내용 직접 쓰기 (예: 7번 학생을 때림 / 활동 후 뒷정리를 잘함)">\
+          <button class="btn-secondary" id="obFreeSave">저장</button></div>\
         <div id="obLast" class="last-save"></div>\
       </div>\
       <div class="ob-grid">\
@@ -75,6 +78,11 @@ DN.Observe = (function () {
     const memo = container.querySelector('#obMemo');
     if (memo) memo.addEventListener('input', function () { state.memo = memo.value; });
     container.querySelector('#obPresets').addEventListener('click', openPresetEditor);
+    const free = container.querySelector('#obFree');
+    free.value = state.free || '';
+    free.addEventListener('input', function () { state.free = free.value; });
+    free.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) recordFree(); });
+    container.querySelector('#obFreeSave').addEventListener('click', recordFree);
   }
 
   // ── 빠른 기록 ──
@@ -83,7 +91,8 @@ DN.Observe = (function () {
     const groups = R.presetGroups();
     box.innerHTML = groups.length ? groups.map(function (g) {
       return '<div class="preset-group"><span class="preset-gname">' + esc(g.name) + '</span>' +
-        g.items.map(function (p) { return '<button class="preset-btn" data-preset="' + esc(p.id) + '">' + esc(p.label) + '</button>'; }).join('') + '</div>';
+        g.items.map(function (p) { return '<button class="preset-btn" data-preset="' + esc(p.id) + '">' + esc(p.label) + '</button>'; }).join('') +
+        (g.items.some(function (p) { return R.isConflictLabel(p.label); }) ? '<p class="preset-tip">💡 다툰 친구들을 함께 고르고 누르면 자리·모둠에서 떼어 놓도록 추천해요</p>' : '') + '</div>';
     }).join('') : '<p class="side-empty">상황 버튼이 없어요. [상황 버튼 편집]에서 추가해 주세요.</p>';
     box.addEventListener('click', function (e) {
       const b = e.target.closest('[data-preset]');
@@ -93,13 +102,21 @@ DN.Observe = (function () {
 
   function record(presetId) {
     const p = R.presets().find(function (x) { return x.id === presetId; });
-    if (!p) return;
+    if (p) save(p.label, function (nos) { return R.addObservations(state.date, nos, p, state.memoOpen ? state.memo.trim() : ''); });
+  }
+  function recordFree() {
+    const t = (state.free || '').trim();
+    if (!t) { toast('내용을 써 주세요.', 'info'); rootEl.querySelector('#obFree').focus(); return; }
+    save(t, function (nos) { return R.addFreeObservations(state.date, nos, t); }, true);
+  }
+  function save(label, add, isFree) {
     if (!state.selected.size) { toast('먼저 학생 번호를 골라 주세요.', 'info'); return; }
     if (!DN.Events.isDate(state.date)) { toast('날짜를 확인해 주세요.', 'error'); return; }
     const nos = Array.from(state.selected).sort(function (a, b) { return a - b; });
-    const saved = R.addObservations(state.date, nos, p, state.memoOpen ? state.memo.trim() : '');
+    const saved = add(nos);
     if (!saved.length) { toast('저장하지 못했어요. 저장 공간을 확인해 주세요.', 'error'); return; }
-    const text = DN.Picker.listText(nos) + ' · ' + p.label;
+    if (isFree) state.free = '';
+    const text = DN.Picker.listText(nos) + ' · ' + label;
     state.last = { ids: saved.map(function (r) { return r.id; }), text: text + (state.date !== today() ? ' (' + md(state.date) + ')' : '') };
     toast(text + ' 저장됨', 'success');
     state.selected.clear();
@@ -192,7 +209,8 @@ DN.Observe = (function () {
       }).join('') + '</div>' : '') +
       (list.length ? '<div class="ob-list">' + list.slice().reverse().map(function (x) {
         return '<div class="ob-row"><span class="ob-date">' + esc(md(x.date)) + '</span>' +
-          '<span class="ob-label">' + esc(x.label) + (x.device === 'mobile' ? ' <small title="핸드폰에서 기록">📱</small>' : '') + '</span>' +
+          '<span class="ob-label">' + esc(x.label) +
+            (x.with && x.with.length ? ' <small>· 함께 ' + esc(x.with.map(function (n) { return n + '번'; }).join(', ')) + '</small>' : '') + (x.device === 'mobile' ? ' <small title="핸드폰에서 기록">📱</small>' : '') + '</span>' +
           '<input class="ob-memo" data-memo="' + esc(x.id) + '" value="' + esc(x.memo || '') + '" placeholder="메모">' +
           '<button class="ic del" data-del="' + esc(x.id) + '" aria-label="기록 삭제">✕</button></div>';
       }).join('') + '</div>' : '<p class="side-empty">이 기간에 기록이 없어요.</p>');

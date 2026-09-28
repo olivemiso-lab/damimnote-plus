@@ -72,7 +72,7 @@ DN.Seating = (function () {
         </div>\
         <button class="btn-primary seat-run" id="stRun">🎲 자동 배치</button>\
       </div>\
-      <div class="card seat-card"><details id="stRelBox"><summary class="seat-sum">⚔️🤝 갈등 관계 · 필수 동행 설정 <small>(' + relSummary() + ')</small></summary>\
+      <div class="card seat-card"><details id="stRelBox"' + (suggCount(list) ? ' open' : '') + '><summary class="seat-sum">⚔️🤝 갈등 관계 · 필수 동행 설정 <small>(' + relSummary() + ')</small></summary>\
         <div id="stRel" class="rel-editor"></div></details></div>\
       <div id="stResult"></div>\
       <div class="card seat-card"><div class="side-head"><h2 class="side-title">📅 저장한 배치</h2>' +
@@ -84,9 +84,11 @@ DN.Seating = (function () {
     bind(container);
   }
 
+  function suggCount(list) { return A.suggestions(list || roster()).sugg.length; }
   function relSummary() {
     const r = A.getRelations();
-    return '갈등 ' + r.conflicts.length + '쌍 · 동행 ' + r.friends.length + '쌍';
+    const n = suggCount();
+    return '갈등 ' + r.conflicts.length + '쌍 · 동행 ' + r.friends.length + '쌍' + (n ? ' · 관찰 기록 추천 ' + n + '쌍' : '');
   }
 
   function bind(c) {

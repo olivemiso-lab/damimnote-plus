@@ -69,6 +69,41 @@ DN.Settings = (function () {
     return { from, to: SCHEMA_VERSION };
   }
 
+  // ── 화면 스타일 (기기마다 따로, 저장 공간 메타 look) ──
+  const LOOKS = [
+    { id: 'simple', name: '심플', desc: '흰 바탕에 파랑 한 가지', sw: ['#f5f7fa', '#ffffff', '#1a56c4', '#1f2933'] },
+    { id: 'cute', name: '귀여운', desc: '파스텔 알림장', sw: ['#fdfaf5', '#ffe2d3', '#dff0fb', '#dcf3e6'] },
+    { id: 'chic', name: '시크', desc: '검정·회색 모노톤', sw: ['#1c1c1c', '#f3f2ef', '#ffffff', '#171717'] },
+  ];
+  const THEME_COLOR = { simple: '#ffffff', cute: '#fff5eb', chic: '#1c1c1c' };
+  function look() { const l = DN.Store.getMeta('look'); return LOOKS.some(function (x) { return x.id === l; }) ? l : 'cute'; }
+  function applyLook(l) {
+    if (l === 'cute') document.documentElement.removeAttribute('data-look');
+    else document.documentElement.setAttribute('data-look', l);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', THEME_COLOR[l] || THEME_COLOR.cute);
+  }
+  function setLook(l) {
+    DN.Store.setMeta('look', l);
+    applyLook(l);
+  }
+  function lookPickerHtml() {
+    const cur = look();
+    return '<div class="look-pick">' + LOOKS.map(function (x) {
+      return '<button type="button" class="look-opt" data-look="' + x.id + '" aria-pressed="' + (x.id === cur) + '">' +
+        '<div class="look-sw">' + x.sw.map(function (c) { return '<span style="background:' + c + '"></span>'; }).join('') + '</div>' +
+        esc(x.name) + '<small>' + esc(x.desc) + '</small></button>';
+    }).join('') + '</div>';
+  }
+  function bindLookPicker(root) {
+    root.querySelectorAll('.look-opt').forEach(function (b) {
+      b.addEventListener('click', function () {
+        setLook(b.dataset.look);
+        root.querySelectorAll('.look-opt').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      });
+    });
+  }
+
   // ── 입력값 정리 ──
   function clampInt(v, min, max, fallback) {
     const n = parseInt(v, 10);
@@ -99,6 +134,8 @@ DN.Settings = (function () {
     container.innerHTML = '\
       <div class="page-head"><h1>⚙️ 설정</h1></div>\
       <div class="card set-card">\
+        <div class="section-label">화면 스타일</div>' + lookPickerHtml() + '\
+        <p class="set-help">이 기기에만 적용돼요. 핸드폰은 핸드폰 ⚙️ 설정에서 따로 고를 수 있어요.</p>\
         <div class="section-label">우리 반</div>\
         <div class="set-grid">\
           <label for="setYear">학년도</label>\
@@ -131,6 +168,7 @@ DN.Settings = (function () {
         <p class="set-meta">데이터 형식 버전 ' + esc(s.schemaVersion) + ' · <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a></p>\
       </div>';
 
+    bindLookPicker(container);
     container.querySelector('#setSave').addEventListener('click', function () {
       save(readForm());
       toast('설정을 저장했어요.', 'success');
@@ -151,5 +189,5 @@ DN.Settings = (function () {
     });
   }
 
-  return { SCHEMA_VERSION, get, save, ensure, defaultSchoolYear, render };
+  return { SCHEMA_VERSION, get, save, ensure, defaultSchoolYear, render, look, setLook, applyLook, lookPickerHtml, bindLookPicker };
 })();

@@ -42,6 +42,13 @@ DN.Arranger = (function () {
     if (r) DN.Store.update(REL_COL, r.id, { conflicts: rel.conflicts, friends: rel.friends });
     else DN.Store.add(REL_COL, { conflicts: rel.conflicts, friends: rel.friends });
   }
+  // 관찰 기록 추천에서 숨긴 번호 쌍 ['3-7', …]
+  function getIgnored() { const r = DN.Store.getAll(REL_COL)[0]; return (r && r.ignored) || []; }
+  function setIgnored(list) {
+    const r = DN.Store.getAll(REL_COL)[0];
+    if (r) DN.Store.update(REL_COL, r.id, { ignored: list });
+    else DN.Store.add(REL_COL, { conflicts: [], friends: [], ignored: list });
+  }
   const isConflict = (a, b, rel) => rel.conflicts.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
 
   // ── 유틸 ──
@@ -330,6 +337,19 @@ DN.Arranger = (function () {
     return { render: true, toast: nameOf(mem) + ' → ' + gid + '모둠으로 옮겼어요.' };
   }
 
+  // 관찰 기록의 다툼 쌍 중 아직 갈등·동행에 넣지 않았고 숨기지도 않은 것
+  function suggestions(students) {
+    const rel = getRelations();
+    const byNo = {};
+    students.forEach(s => { const n = parseInt(s.number, 10); if (n && !byNo[n]) byNo[n] = s; });
+    const ignored = getIgnored();
+    const sugg = (DN.Records ? DN.Records.conflictPairs() : []).filter(p => {
+      const a = byNo[p.a], b = byNo[p.b];
+      return a && b && ignored.indexOf(p.a + '-' + p.b) < 0 && !isConflict(a.id, b.id, rel) && !isConflict(a.id, b.id, { conflicts: rel.friends });
+    });
+    return { byNo, sugg };
+  }
+
   // ── 갈등 관계 · 필수 동행 입력 ──
   // list: 배치할 학생 목록(번호만 있는 학생 포함). 없으면 명단 전체
   function renderRelationEditor(container, list) {
@@ -344,8 +364,26 @@ DN.Arranger = (function () {
       '<div class="rel-list">' + (pairs.length ? pairs.map(([a, b], i) =>
         '<span class="rel-tag ' + kind + '">' + esc(label(a)) + ' ' + joiner + ' ' + esc(label(b)) + '<button data-' + kind + '="' + i + '" aria-label="빼기">✕</button></span>').join('')
         : '<span class="rel-empty">없음</span>') + '</div></div>';
-    container.innerHTML = block('rc', '⚔️ 갈등 관계', '다른 모둠으로 떼어 놓기', rel.conflicts, '↔') +
+    // 관찰 기록(친구와 다툼 등)에서 찾은 쌍 — 교사가 [떼어 놓기]를 눌러야 갈등 관계에 들어간다
+    const { byNo, sugg } = suggestions(students);
+    const md = d => (+d.slice(5, 7)) + '/' + (+d.slice(8));
+    const suggHtml = sugg.length ? '<div class="rel-sugg"><div class="rel-sugg-h">📝 관찰 기록에서 찾았어요 <small>다툼·놀림 등을 두 명 이상 함께 기록한 경우</small></div>' +
+      sugg.map(p => '<div class="rel-sugg-row"><span>' + esc(nameOf(byNo[p.a])) + ' ↔ ' + esc(nameOf(byNo[p.b])) +
+        ' <small>' + p.count + '회 · 최근 ' + md(p.last) + ' · ' + esc(p.labels.join(', ')) + '</small></span>' +
+        '<button class="btn-ghost" data-sg-add="' + p.a + '-' + p.b + '">떼어 놓기</button>' +
+        '<button class="hint-close" data-sg-hide="' + p.a + '-' + p.b + '" title="추천에서 숨기기" aria-label="숨기기">✕</button></div>').join('') + '</div>' : '';
+    container.innerHTML = suggHtml + block('rc', '⚔️ 갈등 관계', '다른 모둠으로 떼어 놓기', rel.conflicts, '↔') +
       block('rf', '🤝 필수 동행', '같은 모둠으로 함께 두기', rel.friends, '+');
+    container.querySelectorAll('[data-sg-add]').forEach(btn => btn.addEventListener('click', () => {
+      const [a, b] = btn.dataset.sgAdd.split('-').map(Number);
+      const r = getRelations(); r.conflicts.push([byNo[a].id, byNo[b].id]); saveRelations(r);
+      DN.utils.toast(nameOf(byNo[a]) + ' ↔ ' + nameOf(byNo[b]) + '을(를) 떼어 놓기로 했어요.', 'success');
+      renderRelationEditor(container, list);
+    }));
+    container.querySelectorAll('[data-sg-hide]').forEach(btn => btn.addEventListener('click', () => {
+      setIgnored(getIgnored().concat([btn.dataset.sgHide]));
+      renderRelationEditor(container, list);
+    }));
 
     const addPair = which => {
       const r = getRelations();
@@ -406,7 +444,7 @@ DN.Arranger = (function () {
 
   return {
     arrange, renderBoard, handleClick, renderRelationEditor, serialize, print,
-    getRelations, saveRelations, nameOf, COLORS, REL_COL,
+    getRelations, saveRelations, nameOf, COLORS, REL_COL, getIgnored, suggestions,
     _internal: { findViolations, findFriendViolations, imbalanceOf, historyPenalty },
   };
 })();

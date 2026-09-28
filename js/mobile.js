@@ -19,12 +19,24 @@ DN.Mobile = (function () {
     date: today(),
     selected: new Set(),
     memo: '', memoOpen: false,
+    free: '',                 // 직접 쓰기 글
     type: '', reason: '',
     undo: null,               // { col, ids, text }
   };
   let undoTimer = null;
 
-  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installPrompt = e; });
+  // 설치 창을 띄울 수 있게 되면(크롬이 알려 줌) 화면의 [앱 설치하기] 버튼을 보여 준다
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    installPrompt = e;
+    document.querySelectorAll('.m-install-btn').forEach(function (b) { b.hidden = false; });
+    document.querySelectorAll('.m-install-menu').forEach(function (b) { b.hidden = true; });
+  });
+  window.addEventListener('appinstalled', function () {
+    installPrompt = null;
+    toast('설치했어요! 바탕화면의 📒 담임노트+ 아이콘으로 열어 주세요.', 'success');
+    if (rootEl && active()) render(rootEl);
+  });
 
   // ── 언제 핸드폰 화면을 쓰나 ──
   // 기기 용도가 핸드폰이면 항상, 아니면 화면이 좁을 때(교사가 “PC 화면으로 보기”를 고르지 않았다면)
@@ -37,12 +49,73 @@ DN.Mobile = (function () {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   }
   function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+  function isAndroid() { return /android/i.test(navigator.userAgent); }
+
+  // ── 앱 안 브라우저(카톡·스레드 등)에서 열었을 때 ──
+  // 그 안에서는 앱 설치도 구글 연결도 안 되므로 크롬(아이폰은 사파리)으로 넘긴다
+  function inAppName() {
+    const ua = navigator.userAgent;
+    if (/KAKAOTALK/i.test(ua)) return '카카오톡';
+    if (/Barcelona/i.test(ua)) return '스레드';
+    if (/Instagram/i.test(ua)) return '인스타그램';
+    if (/FBAN|FBAV|FB_IAB/i.test(ua)) return '페이스북';
+    if (/NAVER\(inapp/i.test(ua)) return '네이버 앱';
+    if (/DaumApps/i.test(ua)) return '다음 앱';
+    if (/\bLine\//i.test(ua)) return '라인';
+    if (isAndroid() && /; wv\)/.test(ua)) return '다른 앱';
+    return '';
+  }
+  function appUrl() { return location.origin + location.pathname; }
+  function kakaoUrl() { return 'kakaotalk://web/openExternal?url=' + encodeURIComponent(appUrl()); }
+  // 안드로이드는 크롬으로 바로, 아이폰 카톡은 카톡의 “바깥 브라우저로 열기”(사파리)
+  function externalUrl(name) {
+    if (!isAndroid() && name === '카카오톡') return kakaoUrl();
+    if (isAndroid()) {
+      return 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' +
+        encodeURIComponent(appUrl()) + ';end';
+    }
+    return '';
+  }
+  function stayInApp() { try { return sessionStorage.getItem('dn_stayInApp') === '1'; } catch (e) { return false; } }
+  function renderEscape(name) {
+    const url = externalUrl(name);
+    const br = isIOS() ? '사파리' : '크롬';
+    rootEl.innerHTML = '<div class="m-wrap m-setup">' +
+      '<div class="m-brand big">📒 담임노트<span class="plus">+</span></div>' +
+      '<div class="m-escape"><b>📲 ' + br + '에서 열어 주세요</b>' +
+      '<p>지금은 <b>' + esc(name) + '</b> 안에서 열려 있어요. 여기서는 앱 설치와 구글 연결이 되지 않아요.</p>' +
+      (url ? '<a class="btn-primary m-big" href="' + esc(url) + '">' + (isIOS() ? '사파리로' : '크롬으로') + ' 열기</a>'
+        : '<ol class="m-steps"><li>화면 위나 아래의 <b>⋯</b> 또는 <b>공유 버튼</b>을 누르세요.</li>' +
+          '<li><b>“Safari로 열기”</b> 또는 <b>“외부 브라우저로 열기”</b>를 고르세요.</li></ol>') +
+      '<button class="btn-secondary" id="mEscCopy">주소 복사하기</button>' +
+      '<p class="m-addr">' + esc(appUrl()) + '</p></div>' +
+      '<button class="m-link" id="mEscStay">그냥 여기서 볼게요</button></div>';
+    rootEl.querySelector('#mEscCopy').addEventListener('click', function () {
+      const fail = function () { toast('위 주소를 길게 눌러 복사해 주세요.', 'info'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(appUrl()).then(function () { toast('주소를 복사했어요. ' + br + '에 붙여 넣어 주세요.', 'success'); }, fail);
+      } else fail();
+    });
+    rootEl.querySelector('#mEscStay').addEventListener('click', function () {
+      try { sessionStorage.setItem('dn_stayInApp', '1'); } catch (e) {}
+      render(rootEl);
+    });
+    // 카톡은 처음 한 번 자동으로 바깥 브라우저를 연다
+    try {
+      if (name === '카카오톡' && sessionStorage.getItem('dn_escTried') !== '1') {
+        sessionStorage.setItem('dn_escTried', '1');
+        location.href = kakaoUrl();
+      }
+    } catch (e) {}
+  }
   function md(d) { return (+d.slice(5, 7)) + '/' + (+d.slice(8)); }
   function mdw(d) { return md(d) + '(' + E.weekdayOf(d) + ')'; }
 
   // ════════ 화면 ════════
   function render(root) {
     rootEl = root;
+    const inApp = inAppName();
+    if (inApp && !stayInApp()) { renderEscape(inApp); return; }
     if (DN.Store.getMeta('mobileReady') !== '1') { renderSetup(); return; }
     const head = '<div class="m-head">' +
       (st.view === 'home'
@@ -122,7 +195,7 @@ DN.Mobile = (function () {
       '<button class="btn-primary m-big" id="suStart">시작하기</button>' +
       installGuide() +
       '</div>';
-    bindInstall();
+    bindInstall(rootEl);
     rootEl.querySelector('#suStart').addEventListener('click', function () {
       const n = parseInt(rootEl.querySelector('#suCount').value, 10);
       if (!(n >= 1 && n <= 60)) { toast('학생 수를 1~60 사이로 입력해 주세요.', 'error'); return; }
@@ -134,27 +207,43 @@ DN.Mobile = (function () {
     });
   }
 
-  // 홈 화면 추가 안내 (설치돼 있으면 표시 안 함)
-  function installGuide() {
-    if (standalone()) return '';
+  // 앱 설치 안내 (설치돼 있거나 앱 안 브라우저면 표시 안 함)
+  // 안드로이드 크롬: [앱 설치하기] 한 번으로 설치 창. 버튼이 아직 준비 안 됐으면 메뉴 안내
+  function installGuide(closable) {
+    if (standalone() || inAppName()) return '';
+    const head = '<div class="m-install-h"><b>📲 앱으로 설치하면 더 편해요</b>' +
+      (closable ? '<button class="hint-close" id="mInstallLater" aria-label="나중에" title="일주일 동안 숨기기">✕</button>' : '') + '</div>';
     if (isIOS()) {
-      return '<div class="m-guide"><b>📲 홈 화면에 추가해 주세요</b>' +
+      return '<div class="m-guide m-install">' + head +
         '<p>사파리 아래쪽 <b>공유 버튼(□↑)</b> → <b>홈 화면에 추가</b>를 누르세요.</p>' +
         '<p class="warn">⚠ 아이폰은 홈 화면에 추가하지 않고 쓰면, 한동안 열지 않았을 때 기록이 지워질 수 있어요.</p></div>';
     }
-    return '<div class="m-guide"><b>📲 홈 화면에 추가하면 앱처럼 쓸 수 있어요</b>' +
-      '<p>크롬 오른쪽 위 <b>⋮ 메뉴</b> → <b>홈 화면에 추가</b>(또는 앱 설치)를 누르세요.</p>' +
-      '<button class="btn-secondary" id="mInstall"' + (installPrompt ? '' : ' hidden') + '>지금 설치하기</button></div>';
+    return '<div class="m-guide m-install">' + head +
+      '<p>바탕화면에 아이콘이 생기고, 앱처럼 전체 화면으로 열려요.</p>' +
+      '<button class="btn-primary m-big m-install-btn"' + (installPrompt ? '' : ' hidden') + '>앱 설치하기</button>' +
+      '<p class="m-install-menu"' + (installPrompt ? ' hidden' : '') + '>크롬 오른쪽 위 <b>⋮</b> → <b>설치 및 바로가기 만들기</b>(또는 홈 화면에 추가) → <b>설치</b></p></div>';
   }
-  function bindInstall() {
-    const b = rootEl.querySelector('#mInstall');
-    if (!b) return;
-    b.addEventListener('click', function () {
-      if (!installPrompt) return;
-      installPrompt.prompt();
-      installPrompt = null;
-      b.hidden = true;
+  function bindInstall(root) {
+    root.querySelectorAll('.m-install-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!installPrompt) return;
+        const ev = installPrompt;
+        installPrompt = null;
+        ev.prompt();
+        b.hidden = true;
+        const menu = b.parentNode.querySelector('.m-install-menu');
+        if (ev.userChoice) ev.userChoice.then(function (c) { if (c && c.outcome !== 'accepted' && menu) menu.hidden = false; });
+      });
     });
+    const later = root.querySelector('#mInstallLater');
+    if (later) later.addEventListener('click', function () {
+      DN.Store.setMeta('installLater', E.addDays(today(), 7));
+      render(rootEl);
+    });
+  }
+  function homeInstallCard() {
+    const until = DN.Store.getMeta('installLater');
+    return until && until > today() ? '' : installGuide(true);
   }
 
   // ── 첫 화면 ──
@@ -180,7 +269,7 @@ DN.Mobile = (function () {
       if (on.length) days.push({ d: x, list: on });
     }
     const grade = DN.Settings.get().grade;
-    body.innerHTML =
+    body.innerHTML = homeInstallCard() +
       '<section class="m-card"><h2>' + (d === today() ? '오늘' : mdw(d)) + ' <small>' + (d === today() ? mdw(d) : '') + '</small></h2>' +
         (todays.length ? '<ul class="m-list">' + todays.map(evLine).join('') + '</ul>' : '<p class="m-empty">일정이 없어요.</p>') + '</section>' +
       (DN.Weekly.forDate(d) ? '<section class="m-card"><h2>🕘 ' + (d === today() ? '오늘' : mdw(d)) + ' 시간표</h2>' + DN.Weekly.dayListHtml(DN.Weekly.forDate(d)) + '</section>' : '') +
@@ -193,6 +282,7 @@ DN.Mobile = (function () {
           return '<div class="m-day"><div class="m-day-d' + (hol ? ' hol' : '') + (x.d === today() ? ' today' : '') + '">' + esc(mdw(x.d)) + '</div>' +
             '<ul class="m-list">' + x.list.map(evLine).join('') + '</ul></div>';
         }).join('') : '<p class="m-empty">이번 주 일정이 없어요. PC에서 [일정 보내기]로 받을 수 있어요.</p>') + '</section>';
+    bindInstall(body);
     body.querySelector('#mGoObs').addEventListener('click', function () { go('obs'); });
     body.querySelector('#mGoAtt').addEventListener('click', function () { go('att'); });
     body.addEventListener('click', function (e) {
@@ -245,14 +335,30 @@ DN.Mobile = (function () {
   function renderObs(body) {
     const groups = R.presetGroups();
     body.innerHTML = pickerSection() +
-      '<section class="m-card"><h2>② 상황 누르기 <small>누르면 바로 저장돼요</small></h2>' +
+      '<section class="m-card" id="mPresetCard"><h2>② 상황 누르기 <small>누르면 바로 저장돼요</small></h2>' +
       (groups.length ? groups.map(function (g) {
         return '<div class="m-preset-g"><div class="m-gname">' + esc(g.name) + '</div><div class="m-presets">' +
-          g.items.map(function (p) { return '<button class="preset-btn" data-preset="' + esc(p.id) + '">' + esc(p.label) + '</button>'; }).join('') + '</div></div>';
+          g.items.map(function (p) { return '<button class="preset-btn" data-preset="' + esc(p.id) + '">' + esc(p.label) + '</button>'; }).join('') + '</div>' +
+          (g.items.some(function (p) { return R.isConflictLabel(p.label); }) ? '<p class="preset-tip">💡 다툰 친구들을 함께 고르고 누르면 자리·모둠에서 떼어 놓도록 추천해요</p>' : '') + '</div>';
       }).join('') : '<p class="m-empty">상황 버튼이 없어요. PC에서 [일정 보내기]를 받으면 PC의 버튼이 들어와요.</p>') +
-      '<div class="m-memo">' + memoHtml('') + '</div></section>';
+      '<div class="m-memo">' + memoHtml('') + '</div></section>' +
+      '<section class="m-card m-free"><h2>✏️ 직접 쓰기 <small>버튼에 없는 내용</small></h2>' +
+      '<textarea id="mFree" rows="2" maxlength="60" placeholder="예: 7번 학생을 때림 / 활동 후 뒷정리를 잘함">' + esc(st.free) + '</textarea>' +
+      '<button class="btn-primary m-big" id="mFreeSave">저장</button></section>';
     bindCommon(body);
-    body.querySelector('.m-card:last-child').addEventListener('click', function (e) {
+    const free = body.querySelector('#mFree');
+    free.addEventListener('input', function () { st.free = free.value; });
+    body.querySelector('#mFreeSave').addEventListener('click', function () {
+      if (!st.selected.size) { toast('먼저 번호를 골라 주세요.', 'info'); return; }
+      const text = free.value.trim();
+      if (!text) { toast('내용을 써 주세요.', 'info'); free.focus(); return; }
+      const nos = Array.from(st.selected).sort(function (a, b2) { return a - b2; });
+      const saved = R.addFreeObservations(st.date, nos, text);
+      if (!saved.length) { toast('저장하지 못했어요.', 'error'); return; }
+      st.free = '';
+      afterSave(R.OBS, saved, DN.Picker.listText(nos) + ' · ' + text + ' 저장됨');
+    });
+    body.querySelector('#mPresetCard').addEventListener('click', function (e) {
       const b = e.target.closest('[data-preset]');
       if (!b) return;
       const p = R.presets().find(function (x) { return x.id === b.dataset.preset; });
@@ -273,7 +379,8 @@ DN.Mobile = (function () {
   }
   function renderAtt(body) {
     body.innerHTML = '<p class="notice small">📌 나이스 입력 전 확인용 메모이며, 공식 출결은 나이스에 입력하세요.</p>' + pickerSection() +
-      '<section class="m-card"><h2>② 유형 · 사유</h2>' + segHtml('type', R.TYPES) + segHtml('reason', R.REASONS) +
+      '<section class="m-card"><h2>② 유형</h2>' + segHtml('type', R.TYPES) + '</section>' +
+      '<section class="m-card"><h2>③ 사유</h2>' + segHtml('reason', R.REASONS) +
       '<div class="m-memo">' + memoHtml('병명 등 구체적인 사유는 적지 마세요.') + '</div>' +
       '<button class="btn-primary m-big" id="mAttSave">저장</button></section>';
     bindCommon(body);
@@ -328,6 +435,7 @@ DN.Mobile = (function () {
         return '<option value="' + g + '"' + (g === s.grade ? ' selected' : '') + '>' + g + '학년</option>'; }).join('') + '</select>' +
       '</div>' +
       '<label class="check-label m-check"><input type="checkbox" id="mnPhone"' + (isPhone() ? ' checked' : '') + '> 이 기기는 핸드폰이에요</label>' +
+      '<div class="md-label">화면 스타일</div>' + DN.Settings.lookPickerHtml() +
       '<div class="md-label">☁️ 구글 드라이브 자동 동기화</div>' +
       (DN.Cloud.linked()
         ? '<p class="set-help" style="margin-top:0">연결됨: ' + esc(DN.Cloud.account() || '구글 계정') + '<br>PC에서도 같은 계정으로 연결하면 기록이 저절로 오가요.</p>' +
@@ -346,8 +454,8 @@ DN.Mobile = (function () {
       '</div>' + installGuide();
     const m = openModal('설정', body, '<span class="pv-spacer"></span><button class="btn-cancel" data-close>닫기</button><button class="btn-primary" id="mnSave">저장</button>');
     rootEl = rootEl || document.getElementById('view');
-    const inst = m.querySelector('#mInstall');
-    if (inst) inst.addEventListener('click', function () { if (installPrompt) { installPrompt.prompt(); installPrompt = null; inst.hidden = true; } });
+    bindInstall(m);
+    DN.Settings.bindLookPicker(m);
     m.querySelector('#mnBackup').addEventListener('click', function () { DN.Backup.exportJson(); });
     const cloudOn = m.querySelector('#mnCloudOn');
     if (cloudOn) cloudOn.addEventListener('click', function () {

@@ -42,7 +42,10 @@ DN.Sync = (function () {
   }
   function cleanObservation(r) {
     if (!baseOk(r) || !DN.Events.isDate(r.date) || !(r.studentNo >= 1 && r.studentNo <= 99 && r.studentNo % 1 === 0)) return null;
-    return Object.assign(base(r), { date: r.date, studentNo: r.studentNo, presetId: str(r.presetId, 80), label: str(r.label, 60), memo: str(r.memo, 200), device: 'mobile' });
+    const o = Object.assign(base(r), { date: r.date, studentNo: r.studentNo, presetId: str(r.presetId, 80), label: str(r.label, 60), memo: str(r.memo, 200), device: 'mobile' });
+    const w = Array.isArray(r.with) ? r.with.filter(function (n) { return n >= 1 && n <= 99 && n % 1 === 0 && n !== r.studentNo; }).slice(0, 10) : [];
+    if (w.length) o.with = w;
+    return o;
   }
   function cleanAttendance(r) {
     if (!baseOk(r) || !DN.Events.isDate(r.date) || !(r.studentNo >= 1 && r.studentNo <= 99 && r.studentNo % 1 === 0)) return null;

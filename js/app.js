@@ -98,6 +98,7 @@ DN.App = (function () {
 
   function init() {
     DN.Settings.ensure();
+    DN.Settings.applyLook(DN.Settings.look());
     const nav = document.getElementById('nav');
     nav.innerHTML = TABS.map(function (t) {
       return '<button class="nav-btn" data-tab="' + t.id + '">' +

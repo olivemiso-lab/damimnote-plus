@@ -27,6 +27,7 @@
 
   --brand: #c85a33;        /* 로고·제목 포인트 */
   --radius: 18px;
+  --pill: 999px;           /* 버튼·메뉴 모서리 (심플·시크는 각지게) */
   --shadow: 0 2px 10px rgba(140, 100, 60, 0.07);
 }
 
@@ -71,7 +72,7 @@ input, select, textarea { font-family: inherit; font-size: 13.5px; color: var(--
 .nav-btn {
   display: flex; align-items: center; gap: 9px;
   padding: 10px 14px;
-  border: none; border-radius: 999px;
+  border: none; border-radius: var(--pill);
   background: transparent; color: var(--ink-sub);
   font-size: 14px; font-weight: 700; text-align: left;
   transition: background 0.15s, color 0.15s;
@@ -155,7 +156,7 @@ input[type="checkbox"] { accent-color: var(--brand); }
 
 /* ── 버튼 ── */
 .btn-primary, .btn-secondary, .btn-cancel, .btn-ghost {
-  border-radius: 999px;
+  border-radius: var(--pill);
   font-size: 13.5px; font-weight: 800;
   padding: 9px 18px;
   border: 1.5px solid transparent;
@@ -414,8 +415,8 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 }
 .toggle[aria-pressed="true"] { background: var(--mint-bg); border-color: #b5e3c8; color: var(--mint-ink); }
 .toggle[aria-pressed="true"]::before { content: "✓ "; }
-.seg { display: inline-flex; background: var(--soft); border: 1.5px solid var(--line); border-radius: 999px; padding: 2px; }
-.seg button { border: none; background: none; border-radius: 999px; padding: 5px 13px; font-size: 12.5px; font-weight: 800; color: var(--ink-sub); white-space: nowrap; }
+.seg { display: inline-flex; background: var(--soft); border: 1.5px solid var(--line); border-radius: var(--pill); padding: 2px; }
+.seg button { border: none; background: none; border-radius: var(--pill); padding: 5px 13px; font-size: 12.5px; font-weight: 800; color: var(--ink-sub); white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(140, 100, 60, 0.15); }
 
 /* ── 달력 ── */
@@ -539,7 +540,7 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
 .suggest:empty { display: none; }
 .suggest-label { font-size: 11.5px; font-weight: 800; color: var(--ink-sub); }
-.chip-btn { border: 1.5px solid var(--sky-mid); background: var(--sky-bg); color: var(--sky-ink); border-radius: 999px; padding: 3px 11px; font-size: 12px; font-weight: 800; }
+.chip-btn { border: 1.5px solid var(--sky-mid); background: var(--sky-bg); color: var(--sky-ink); border-radius: var(--pill); padding: 3px 11px; font-size: 12px; font-weight: 800; }
 .chip-btn.dl { border-color: #f6c3d1; background: var(--pink-bg); color: var(--pink-ink); }
 
 /* 화면이 넓지 않으면 할 일·날짜 패널을 달력 아래로 */
@@ -579,7 +580,7 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .preset-gname { width: 44px; flex-shrink: 0; font-size: 12px; font-weight: 900; color: var(--ink-sub); }
 .preset-btn {
   border: 1.5px solid var(--peach-mid); background: var(--peach-bg); color: var(--peach-ink);
-  border-radius: 999px; padding: 8px 15px; font-size: 13px; font-weight: 800;
+  border-radius: var(--pill); padding: 8px 15px; font-size: 13px; font-weight: 800;
 }
 .preset-btn:hover { background: var(--peach-mid); }
 .preset-group:nth-child(2) .preset-btn { border-color: #b5e3c8; background: var(--mint-bg); color: var(--mint-ink); }
@@ -779,6 +780,18 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .m-guide p { margin-top: 4px; }
 .m-guide .warn { color: var(--danger); font-weight: 800; }
 .m-guide .btn-secondary { margin-top: 8px; background: #fff; }
+.m-install-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.m-install-h .hint-close { color: var(--sky-ink); border: none; background: none; font-size: 16px; padding: 2px 6px; }
+#mBody > .m-install { margin: 0 0 12px; }
+.m-guide .m-install-btn { background: var(--sky-ink); color: #fff; border-color: var(--sky-ink); }
+.m-escape { margin-top: 18px; padding: 18px 16px; border-radius: 18px; background: var(--peach-bg); color: var(--peach-ink); font-size: 14px; }
+.m-escape > b { display: block; font-size: 17px; margin-bottom: 6px; }
+.m-escape p { margin-top: 4px; color: var(--ink); }
+.m-escape a.m-big { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.m-escape .btn-secondary { width: 100%; margin-top: 10px; background: #fff; }
+.m-steps { margin: 10px 0 0 20px; color: var(--ink); line-height: 1.7; }
+.m-escape .m-addr { font-size: 12px; color: var(--ink-sub); word-break: break-all; text-align: center; margin-top: 8px; }
+.m-link { display: block; margin: 16px auto 0; border: none; background: none; color: var(--ink-sub); font-size: 13px; text-decoration: underline; }
 .m-menu-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 /* 핸드폰에서 입력칸 글자가 16px 미만이면 아이폰이 화면을 확대하므로 */
 .m-mode input, .m-mode select, .m-mode textarea { font-size: 16px; }
@@ -858,6 +871,17 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .rel-tag.rc { background: var(--rose-bg); color: var(--danger); }
 .rel-tag.rf { background: var(--mint-bg); color: var(--mint-ink); }
 .rel-tag button { border: none; background: none; color: inherit; font-size: 11px; padding: 2px 6px; }
+.rel-sugg { grid-column: 1 / -1; background: var(--lemon-bg); border-radius: 14px; padding: 10px 14px; }
+.rel-sugg-h { font-size: 13.5px; font-weight: 900; color: var(--lemon-ink); margin-bottom: 6px; }
+.rel-sugg-h small { font-weight: 600; color: var(--ink-sub); font-size: 11.5px; }
+.rel-sugg-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; font-size: 13px; font-weight: 700; }
+.rel-sugg-row span { flex: 1; min-width: 0; }
+.rel-sugg-row small { font-weight: 600; color: var(--ink-sub); }
+.free-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.free-row input { flex: 1; min-width: 0; }
+.m-free textarea { width: 100%; font-size: 16px; }
+.preset-tip { font-size: 11.5px; color: var(--ink-sub); margin: 2px 0 4px; }
+.preset-group .preset-tip { flex-basis: 100%; margin: 0 0 4px 50px; }
 .rel-empty { font-size: 12px; color: var(--ink-sub); }
 
 .board-wrap { overflow-x: auto; }
@@ -902,3 +926,64 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .cloud-bar[hidden] { display: none; }
 .m-mode .cloud-bar { display: none; }
 .m-cloud { font-size: 12.5px; line-height: 1.4; }
+
+/* ════════════════════════════════════════════════════
+   화면 스타일 (⚙️ 설정에서 고름, 기기마다 따로) — 기본은 위의 “귀여운”(파스텔)
+   html[data-look="simple"] : 흰 바탕 + 파랑 한 가지, 각진 버튼
+   html[data-look="chic"]   : 모노톤(검정·회색), 어두운 사이드바
+   ════════════════════════════════════════════════════ */
+html[data-look="simple"] {
+  --canvas: #f5f7fa;  --paper: #ffffff;  --side: #ffffff;  --soft: #f2f4f7;
+  --ink: #1f2933;     --ink-sub: #66727f; --line: #e3e7ec; --line-strong: #d0d6de;
+  --peach-bg: #e8f0fe; --peach-ink: #1a56c4; --peach-mid: #c6d8fb;
+  --sky-bg: #eef2f6;   --sky-ink: #34506e;   --sky-mid: #d2dce7;
+  --mint-bg: #e6f4ed;  --mint-ink: #1d6a46;
+  --lemon-bg: #faf4df; --lemon-ink: #735808; --lemon-mid: #ecdba0;
+  --lilac-bg: #eeedf6; --lilac-ink: #4b4784;
+  --pink-bg: #f8edf0;  --pink-ink: #963350;
+  --rose-bg: #fbeeee;  --danger: #c63f3a;
+  --brand: #1a56c4;
+  --radius: 10px; --pill: 8px;
+  --shadow: 0 1px 3px rgba(20, 30, 45, 0.06);
+}
+html[data-look="chic"] {
+  --canvas: #f3f2ef;  --paper: #ffffff;  --side: #1c1c1c;  --soft: #f5f4f1;
+  --ink: #171717;     --ink-sub: #6b6966; --line: #e5e3df; --line-strong: #d2cfc9;
+  --peach-bg: #ebe9e5; --peach-ink: #171717; --peach-mid: #d6d2cb;
+  --sky-bg: #f0efec;   --sky-ink: #3a3a3a;   --sky-mid: #d9d6d0;
+  --mint-bg: #e8eee9;  --mint-ink: #2e5a3f;
+  --lemon-bg: #f3efe3; --lemon-ink: #5e4d1c; --lemon-mid: #ddd3b6;
+  --lilac-bg: #ecebf0; --lilac-ink: #45425a;
+  --pink-bg: #f1e9ea;  --pink-ink: #7a3443;
+  --rose-bg: #f5eaea;  --danger: #b0322e;
+  --brand: #171717;
+  --radius: 6px; --pill: 4px;
+  --shadow: none;
+}
+/* 심플·시크: 파스텔 칠 대신 또렷한 주 버튼 */
+html[data-look="simple"] .btn-primary { background: #1a56c4; color: #fff; border-color: #1a56c4; }
+html[data-look="simple"] .btn-primary:hover { background: #1647a3; }
+html[data-look="chic"] .btn-primary { background: #171717; color: #fff; border-color: #171717; }
+html[data-look="chic"] .btn-primary:hover { background: #333; }
+html[data-look="simple"] .nav-btn:hover { background: var(--soft); }
+html[data-look="simple"] .nav-btn.active { background: #e8f0fe; color: #1a56c4; }
+html[data-look="simple"] .brand, html[data-look="chic"] .brand { border-bottom-style: solid; border-bottom-width: 1px; }
+html[data-look="simple"] .m-card, html[data-look="chic"] .m-card,
+html[data-look="simple"] .modal, html[data-look="chic"] .modal { border-radius: var(--radius); }
+/* 시크: 어두운 사이드바 */
+html[data-look="chic"] .sidebar { border-right-color: #1c1c1c; }
+html[data-look="chic"] .brand { border-bottom-color: #3a3a3a; }
+html[data-look="chic"] .brand-title, html[data-look="chic"] .brand-title .plus { color: #fff; }
+html[data-look="chic"] .brand-sub, html[data-look="chic"] .side-foot { color: #8f8c88; }
+html[data-look="chic"] .nav-btn { color: #b5b2ad; }
+html[data-look="chic"] .nav-btn:hover { background: #2c2c2c; color: #fff; }
+html[data-look="chic"] .nav-btn.active { background: #fff; color: #171717; }
+html[data-look="chic"] .nav-ic { filter: grayscale(1); }
+
+/* 설정: 스타일 고르기 */
+.look-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 6px; }
+.look-opt { border: 2px solid var(--line); border-radius: 12px; background: var(--paper); padding: 10px; text-align: left; font-weight: 800; color: var(--ink); }
+.look-opt[aria-pressed="true"] { border-color: var(--ink); }
+.look-opt small { display: block; font-weight: 600; color: var(--ink-sub); font-size: 11.5px; margin-top: 2px; }
+.look-sw { display: flex; height: 38px; border-radius: 8px; overflow: hidden; margin-bottom: 8px; border: 1px solid rgba(0, 0, 0, 0.06); }
+.look-sw span { flex: 1; }
