@@ -209,6 +209,37 @@ DN.Records = (function () {
     return lines.join('\r\n');
   }
 
+  // 엑셀로 받기용 표 (번호 → 날짜 순). 첫 줄은 제목 줄
+  function observationRows(from, to, names) {
+    const groupOf = {};
+    DN.Store.getAll(PRE).forEach(function (p) { groupOf[p.id] = p.group; });
+    const map = names || nameMap();
+    const list = observations(from, to).slice().sort(function (a, b) {
+      return (a.studentNo - b.studentNo) || (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt < b.createdAt ? -1 : 1));
+    });
+    return [['번호', '이름', '날짜', '요일', '무리', '상황', '메모', '함께 (번호)', '기록한 곳']].concat(list.map(function (r) {
+      return [r.studentNo, map[r.studentNo] || '', r.date, DN.Events.weekdayOf(r.date),
+        groupOf[r.presetId] || (r.presetId ? '기타' : '직접'), r.label, r.memo || '',
+        Array.isArray(r.with) ? r.with.map(function (n) { return n + '번'; }).join(', ') : '',
+        r.device === 'mobile' ? '핸드폰' : 'PC'];
+    }));
+  }
+
+  function attendanceRows(from, to, names) {
+    const map = names || nameMap();
+    const list = attendance(from, to).slice().sort(function (a, b) {
+      return (a.studentNo - b.studentNo) || (a.date < b.date ? -1 : a.date > b.date ? 1 : TYPES.indexOf(a.type) - TYPES.indexOf(b.type));
+    });
+    return [['번호', '이름', '날짜', '요일', '유형', '사유', '메모', '기록한 곳']].concat(list.map(function (r) {
+      return [r.studentNo, map[r.studentNo] || '', r.date, DN.Events.weekdayOf(r.date), r.type, r.reason, r.memo || '',
+        r.device === 'mobile' ? '핸드폰' : 'PC'];
+    }));
+  }
+  // 표(첫 줄 제목) → 엑셀에서 한글이 깨지지 않는 CSV (BOM)
+  function toCsv(rows) {
+    return String.fromCharCode(0xFEFF) + rows.map(function (row) { return row.map(DN.Backup.csvCell).join(','); }).join(String.fromCharCode(13, 10));
+  }
+
   // ── 출결 메모 ──
   // 같은 날·같은 학생·같은 유형이면 덮어쓰고, 없으면 새로 만든다. 결과: 저장된 건수
   function saveAttendance(date, nos, type, reason, memo) {
@@ -288,7 +319,7 @@ DN.Records = (function () {
     studentNumbers, nameMap, label,
     presets, presetGroups, addPreset, updatePreset, removePreset, movePreset,
     addObservations, addFreeObservations, updateObservation, removeRecords, observations, countByStudent, countByLabel, copyText,
-    isConflictLabel, conflictPairs,
+    isConflictLabel, conflictPairs, observationRows, attendanceRows, toCsv,
     saveAttendance, updateAttendance, attendance, monthRange, monthSummary, summaryText, termRange,
     unsentRecords, unsentCount,
     OBS, ATT, PRE,

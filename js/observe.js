@@ -58,7 +58,7 @@ DN.Observe = (function () {
         <div id="obLast" class="last-save"></div>\
       </div>\
       <div class="ob-grid">\
-        <div class="card"><div class="side-head"><h2 class="side-title">학생별 기록</h2></div>\
+        <div class="card"><div class="side-head"><h2 class="side-title">학생별 기록</h2><button class="btn-secondary side-add" id="obCsv" title="고른 기간의 모든 학생 관찰 기록을 엑셀 파일로 받아요">📥 엑셀로 받기</button></div>\
           <div class="period-bar" id="obPeriod"></div><div id="obStudents"></div></div>\
         <div class="card" id="obDetail"></div>\
       </div>';
@@ -78,6 +78,7 @@ DN.Observe = (function () {
     const memo = container.querySelector('#obMemo');
     if (memo) memo.addEventListener('input', function () { state.memo = memo.value; });
     container.querySelector('#obPresets').addEventListener('click', openPresetEditor);
+    container.querySelector('#obCsv').addEventListener('click', exportCsv);
     const free = container.querySelector('#obFree');
     free.value = state.free || '';
     free.addEventListener('input', function () { state.free = free.value; });
@@ -163,6 +164,16 @@ DN.Observe = (function () {
       });
     });
   }
+  // 고른 기간의 관찰 기록 전체 → CSV (엑셀에서 한글이 깨지지 않도록 BOM)
+  function exportCsv() {
+    const r = range();
+    const rows = R.observationRows(r.from, r.to);
+    if (rows.length < 2) { toast('이 기간에 관찰 기록이 없어요.', 'info'); return; }
+    const name = '관찰기록_' + (r.from ? r.from + '~' + r.to : '전체') + '.csv';
+    DN.Backup.download(name, R.toCsv(rows), 'text/csv;charset=utf-8');
+    toast('관찰 기록 ' + (rows.length - 1) + '건을 엑셀 파일로 받았어요.', 'success');
+  }
+
   function periodText() {
     const r = range();
     return r.from ? md(r.from) + ' ~ ' + md(r.to) : '처음부터 지금까지';

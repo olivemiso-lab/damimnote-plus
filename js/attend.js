@@ -55,7 +55,7 @@ DN.Attend = (function () {
       </div>\
       <div class="card">\
         <div class="side-head"><h2 class="side-title">' + m + '월 요약 (나이스 마감 대조용)</h2>\
-          <button class="btn-secondary side-add" id="atCopy">📋 요약 복사</button></div>\
+          <span class="pv-spacer"></span><button class="btn-ghost" id="atCsvMonth">📥 ' + m + '월 엑셀</button><button class="btn-ghost" id="atCsvYear">📥 학년도 전체 엑셀</button><button class="btn-secondary" id="atCopy">📋 요약 복사</button></div>\
         <div id="atSummary"></div>\
       </div>';
 
@@ -76,6 +76,14 @@ DN.Attend = (function () {
       state.month = DN.Events.toStr(dt).slice(0, 7);
       render(container);
     };
+    q('#atCsvMonth').addEventListener('click', function () {
+      const r = R.monthRange(state.month);
+      exportCsv(r.from, r.to, '출결메모_' + y + '년' + m + '월.csv');
+    });
+    q('#atCsvYear').addEventListener('click', function () {
+      const r = R.termRange(state.month + '-01', 'year');
+      exportCsv(r.from, r.to, '출결메모_' + r.from.slice(0, 4) + '학년도.csv');
+    });
     q('#atPrev').addEventListener('click', function () { move(-1); });
     q('#atNext').addEventListener('click', function () { move(1); });
     q('#atCopy').addEventListener('click', function () {
@@ -113,6 +121,13 @@ DN.Attend = (function () {
   }
 
   // ── 월별 표: 학생(행) × 날짜(열) ──
+  function exportCsv(from, to, name) {
+    const rows = R.attendanceRows(from, to);
+    if (rows.length < 2) { toast('이 기간에 출결 메모가 없어요.', 'info'); return; }
+    DN.Backup.download(name, R.toCsv(rows), 'text/csv;charset=utf-8');
+    toast('출결 메모 ' + (rows.length - 1) + '건을 엑셀 파일로 받았어요.', 'success');
+  }
+
   function renderTable() {
     const r = R.monthRange(state.month);
     const days = +r.to.slice(8);

@@ -400,7 +400,7 @@ DN.Backup = (function () {
   }
 
   return {
-    render, buildBackup, parseBackup, restore, summarize, markBackup, isDue, dueText, snoozeReminder, exportJson,
+    render, buildBackup, parseBackup, restore, summarize, markBackup, isDue, dueText, snoozeReminder, exportJson, csvCell, download,
     buildZip, parseZip, restoreWithFiles, importFile,
   };
 })();

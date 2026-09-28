@@ -400,7 +400,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .sc-side { display: flex; flex-direction: column; gap: 14px; }
 .sc-side .card { padding: 16px; }
 .side-title { font-size: 14.5px; font-weight: 900; margin-bottom: 8px; }
-.side-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.side-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
 .side-head .side-title { margin-bottom: 0; }
 .side-add { padding: 4px 11px; font-size: 12px; }
 .side-empty { font-size: 12.5px; color: var(--ink-sub); padding: 8px 2px; }
