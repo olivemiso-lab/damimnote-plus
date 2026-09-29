@@ -297,7 +297,7 @@ DN.Mobile = (function () {
       '<path d="M186 141 L236 129"/></g>' +
       '<path d="M252 132 H284" style="stroke:var(--peach-mid)" stroke-width="6"/>' +
       '<path d="M68 132 H92" style="stroke:var(--mint-ink)" stroke-width="3" opacity=".35"/>' +
-      '</svg></div>';
+      '</svg><a class="m-guide-home" href="guide.html" target="_blank" rel="noopener">📖 사용 설명서</a></div>';
   }
 
   // 첫 화면: 큰 버튼 세 개(관찰 기록·출결·일정)만
@@ -557,7 +557,8 @@ DN.Mobile = (function () {
   // ── 설정 메뉴 ──
   function openMenu() {
     const s = DN.Settings.get();
-    const body = '<div class="fgrid">' +
+    const body = '<a class="m-guide-top" href="guide.html" target="_blank" rel="noopener">📖 사용 설명서 보기</a>' +
+      '<div class="fgrid">' +
       '<label for="mnCount">학생 수</label><input type="number" id="mnCount" min="1" max="60" inputmode="numeric" value="' + esc(s.studentCount) + '">' +
       '<label for="mnGrade">학년</label><select id="mnGrade">' + [1, 2, 3, 4, 5, 6].map(function (g) {
         return '<option value="' + g + '"' + (g === s.grade ? ' selected' : '') + '>' + g + '학년</option>'; }).join('') + '</select>' +
@@ -579,7 +580,6 @@ DN.Mobile = (function () {
       '<div class="m-menu-btns">' +
         '<button class="btn-ghost" id="mnBackup">기록 백업 파일 받기</button>' +
         (isPhone() ? '' : '<button class="btn-ghost" id="mnDesktop">PC 화면으로 보기</button>') +
-        '<a class="btn-ghost m-guide-link" href="guide.html" target="_blank" rel="noopener">📖 사용 설명서</a>' +
       '</div>' + installGuide();
     const m = openModal('설정', body, '<span class="pv-spacer"></span><button class="btn-cancel" data-close>닫기</button><button class="btn-primary" id="mnSave">저장</button>');
     rootEl = rootEl || document.getElementById('view');
