@@ -150,14 +150,18 @@ DN.Mobile = (function () {
     window.scrollTo(0, 0);
   }
 
+  // 아래 줄은 PC로 아직 안 간 기록이 있을 때만 보인다 (평소 동기화는 ⚙️ 메뉴에서)
+  function sendBarShown() { return R.unsentCount() > 0 || !!(DN.Cloud && DN.Cloud.isBusy()); }
   function sendBar() {
-    return '<div class="m-send" id="mSendBar">' + sendBarInner() + '</div>';
+    return '<div class="m-send" id="mSendBar"' + (sendBarShown() ? '' : ' hidden') + '>' + sendBarInner() + '</div>';
   }
   function sendBarInner() {
     const n = R.unsentCount();
     if (DN.Cloud && DN.Cloud.linked()) {
-      return '<span class="m-cloud">☁️ ' + esc(DN.Cloud.statusText()) + (n ? ' · 안 보낸 기록 <b>' + n + '</b>건' : '') + '</span>' +
-        '<button class="btn-primary" id="mCloud"' + (DN.Cloud.isBusy() ? ' disabled' : '') + '>동기화</button>';
+      const busy = DN.Cloud.isBusy();
+      return '<span class="m-cloud">☁️ ' + (busy ? '동기화 중…' : 'PC로 아직 안 간 기록 <b>' + n + '</b>건' +
+          (DN.Cloud.tokenValid() ? '' : '<br><small>[동기화]를 눌러 보내 주세요</small>')) + '</span>' +
+        '<button class="btn-primary" id="mCloud"' + (busy ? ' disabled' : '') + '>동기화</button>';
     }
     return '<span>PC로 보내지 않은 기록 <b>' + n + '</b>건</span><button class="btn-primary" id="mSend">PC로 보내기</button>';
   }
@@ -176,6 +180,7 @@ DN.Mobile = (function () {
   function refreshSendBar() {
     const bar = rootEl && rootEl.querySelector('#mSendBar');
     if (!bar) return;
+    bar.hidden = !sendBarShown();
     bar.innerHTML = sendBarInner();
     bindSendBar(rootEl);
   }
@@ -567,8 +572,8 @@ DN.Mobile = (function () {
       '<div class="md-label">화면 스타일</div>' + DN.Settings.lookPickerHtml() +
       '<div class="md-label">☁️ 구글 드라이브 자동 동기화</div>' +
       (DN.Cloud.linked()
-        ? '<p class="set-help" style="margin-top:0">연결됨: ' + esc(DN.Cloud.account() || '구글 계정') + '<br>PC에서도 같은 계정으로 연결하면 기록이 저절로 오가요.</p>' +
-          '<div class="m-menu-btns"><button class="btn-ghost" id="mnCloudOff">연결 끊기</button></div>'
+        ? '<p class="set-help" style="margin-top:0">연결됨: ' + esc(DN.Cloud.account() || '구글 계정') + '<br>' + esc(DN.Cloud.statusText()) + '</p>' +
+          '<div class="m-menu-btns"><button class="btn-primary" id="mnCloudSync">지금 동기화</button><button class="btn-ghost" id="mnCloudOff">연결 끊기</button></div>'
         : '<p class="set-help" style="margin-top:0">PC와 같은 구글 계정으로 연결하면 파일을 옮기지 않아도 기록이 저절로 오가요. 기록은 선생님 드라이브의 숨김 폴더에만 저장되고, 학생 이름은 올라가지 않아요.</p>' +
           '<div class="m-menu-btns"><button class="btn-primary" id="mnCloudOn">구글로 연결</button></div>') +
       '<div class="md-label">파일로 PC와 주고받기</div>' +
@@ -589,6 +594,11 @@ DN.Mobile = (function () {
     const cloudOn = m.querySelector('#mnCloudOn');
     if (cloudOn) cloudOn.addEventListener('click', function () {
       DN.Cloud.connect().then(function () { if (DN.Cloud.linked()) { closeModal(); render(rootEl); } });
+    });
+    const cloudSync = m.querySelector('#mnCloudSync');
+    if (cloudSync) cloudSync.addEventListener('click', function () {
+      cloudSync.disabled = true;
+      DN.Cloud.sync(true).then(function () { closeModal(); render(rootEl); });
     });
     const cloudOff = m.querySelector('#mnCloudOff');
     if (cloudOff) cloudOff.addEventListener('click', function () {
