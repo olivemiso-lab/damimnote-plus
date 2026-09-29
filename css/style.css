@@ -732,6 +732,15 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .m-actions.home { grid-template-columns: 1fr; gap: 12px; margin-top: 4px; }
 .m-actions.home .m-action { flex-direction: row; justify-content: flex-start; gap: 16px; min-height: 112px; padding: 0 26px; font-size: 21px; }
 .m-actions.home .m-action span { font-size: 40px; }
+/* 첫 화면 아래 그림과 한마디 */
+.m-illust { margin-top: 18px; text-align: center; }
+.m-cheer { font-size: 14.5px; font-weight: 800; color: var(--ink-sub); margin-bottom: 4px; }
+.m-illust svg { width: 100%; max-width: 420px; height: auto; display: block; margin: 0 auto; }
+.m-illust .il-cloud { animation: il-drift 9s ease-in-out infinite alternate; }
+.m-illust .il-sun { transform-origin: 300px 44px; animation: il-spin 30s linear infinite; }
+@keyframes il-drift { from { transform: translateX(-6px); } to { transform: translateX(8px); } }
+@keyframes il-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .m-illust .il-cloud, .m-illust .il-sun { animation: none; } }
 /* 네이비: 핸드폰 윗줄이 남색이므로 글자를 밝게 */
 html[data-look="navy"] .m-head { border-bottom-color: #1e3a6e; }
 html[data-look="navy"] .m-brand, html[data-look="navy"] .m-back { color: #fff; }

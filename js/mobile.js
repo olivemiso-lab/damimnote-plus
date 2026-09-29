@@ -260,6 +260,64 @@ DN.Mobile = (function () {
       (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span>' +
       (e.source === 'mobile' ? '<button class="m-ev-del" data-evdel="' + esc(e.id) + '" aria-label="일정 지우기">✕</button>' : '') + '</li>';
   }
+  // 첫 화면 아래 그림: 학교와 나무, 해·구름 (색은 화면 스타일 변수를 따라감) + 날마다 바뀌는 한마디
+  const CHEERS = [
+    '오늘도 아이들과 좋은 하루 보내세요 🌷', '작은 기록이 큰 성장을 만들어요 🌱', '선생님, 물 한 잔 마시고 가요 💧',
+    '오늘 칭찬할 아이를 찾아볼까요? ⭐', '천천히, 차근차근 🐢', '웃는 얼굴이 제일 좋은 수업이에요 😊', '수고 많으셨어요, 선생님 🍀',
+    '선생님의 한마디가 아이의 하루를 바꿔요 ✨', '완벽하지 않아도 괜찮아요 🤍', '오늘 가장 많이 웃은 아이는 누구였나요? 😄',
+    '어제보다 한 뼘 자란 아이들 🌻', '쉬는 시간엔 선생님도 쉬어요 ☕', '기다려 주는 것도 가르침이에요 🕰️',
+    '아이들은 선생님을 보고 배워요 🌈', '오늘 하루도 충분히 잘하고 있어요 👍', '조용한 아이에게도 눈길 한 번 🌙',
+    '깊게 숨 한 번 쉬고 시작해요 🍃', '실수해도 다시 하면 돼요, 아이도 선생님도 🙂', '선생님 덕분에 교실이 따뜻해요 🔥',
+    '작은 변화를 알아보는 눈, 그게 관찰이에요 🔍', '오늘 수업 중 가장 반짝인 순간은? 💎', '퇴근 후엔 나를 위한 시간 🛋️',
+    '아이 한 명 한 명이 다 다른 꽃이에요 🌼', '천천히 자라는 나무가 뿌리가 깊어요 🌳', '좋은 질문 하나가 좋은 수업을 만들어요 ❓',
+    '선생님 목소리도 소중해요, 목 관리 챙기기 🍯', '오늘의 기록이 내일의 이해가 돼요 📒',
+    '칭찬은 구체적으로, 꾸중은 짧게 👏', '하루 한 번, 나에게도 칭찬 한마디 💛',
+  ];
+  // 요일에 맞는 한마디(월·수·금·주말)를 섞어서, 나머지 날은 목록에서 날마다 하나씩
+  const DAY_CHEERS = { 1: '새로운 한 주, 가볍게 시작해요 🚀', 3: '한 주의 반을 왔어요, 잘하고 있어요 🙌', 5: '한 주 동안 정말 수고 많으셨어요 🎉', 6: '주말엔 푹 쉬어요, 선생님 🛌', 0: '내일을 위해 충전하는 하루 🔋' };
+  function homeIllust() {
+    const t = new Date(today() + 'T00:00:00');
+    const n = Math.floor(t.getTime() / 86400000);
+    const msg = (n % 2 === 0 && DAY_CHEERS[t.getDay()]) || CHEERS[n % CHEERS.length];
+    return '<div class="m-illust"><p class="m-cheer">' + esc(msg) + '</p>' +
+      '<svg viewBox="0 0 360 190" role="img" aria-label="학교 그림">' +
+      // 해
+      '<g class="il-sun"><circle cx="300" cy="44" r="20" style="fill:var(--lemon-mid)"/>' +
+      [0, 45, 90, 135, 180, 225, 270, 315].map(function (a) {
+        const r = a * Math.PI / 180, x1 = 300 + Math.cos(r) * 27, y1 = 44 + Math.sin(r) * 27, x2 = 300 + Math.cos(r) * 35, y2 = 44 + Math.sin(r) * 35;
+        return '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" style="stroke:var(--lemon-mid)" stroke-width="4" stroke-linecap="round"/>';
+      }).join('') + '</g>' +
+      // 구름
+      '<g class="il-cloud" fill="#fff" style="stroke:var(--line-strong)" stroke-width="1.5">' +
+      '<path d="M40 58 a14 14 0 0 1 26 -8 a12 12 0 0 1 22 6 a10 10 0 0 1 -2 20 h-44 a10 10 0 0 1 -2 -18z"/>' +
+      '<path d="M200 34 a11 11 0 0 1 20 -6 a9 9 0 0 1 17 5 a8 8 0 0 1 -2 15 h-34 a8 8 0 0 1 -1 -14z"/></g>' +
+      // 언덕
+      '<path d="M0 160 Q90 120 180 150 T360 140 V190 H0z" style="fill:var(--mint-bg)"/>' +
+      '<path d="M0 172 Q120 150 240 168 T360 162 V190 H0z" fill="#bfe8cf" opacity=".8"/>' +
+      // 나무
+      '<rect x="52" y="120" width="8" height="30" rx="3" fill="#b98556"/>' +
+      '<circle cx="44" cy="120" r="12" fill="#6cbf8a"/><circle cx="56" cy="110" r="20" fill="#8fd4a8"/>' +
+      '<circle cx="50" cy="106" r="3" fill="#ff8fa3"/><circle cx="64" cy="116" r="3" fill="#ff8fa3"/>' +
+      // 학교
+      '<rect x="120" y="96" width="120" height="58" rx="6" style="fill:var(--peach-bg);stroke:var(--peach-mid)" stroke-width="2"/>' +
+      '<rect x="160" y="70" width="40" height="84" rx="5" style="fill:var(--paper);stroke:var(--peach-mid)" stroke-width="2"/>' +
+      '<path d="M154 72 L180 50 L206 72z" style="fill:var(--peach-ink)" opacity=".85"/>' +
+      '<line x1="180" y1="50" x2="180" y2="32" stroke="#8a7a70" stroke-width="2"/><path d="M180 32 h14 l-4 5 l4 5 h-14z" fill="#ff8fa3"/>' +
+      '<circle cx="180" cy="90" r="9" fill="#fff" style="stroke:var(--peach-mid)" stroke-width="2"/>' +
+      '<path d="M180 90 V84 M180 90 H185" stroke="#8a7a70" stroke-width="1.8" stroke-linecap="round"/>' +
+      '<rect x="171" y="128" width="18" height="26" rx="3" style="fill:var(--peach-mid)"/>' +
+      [132, 146, 214, 228].map(function (x) {
+        return '<rect x="' + x + '" y="108" width="12" height="12" rx="2" style="fill:var(--sky-bg);stroke:var(--sky-mid)" stroke-width="1.5"/>' +
+          '<rect x="' + x + '" y="128" width="12" height="12" rx="2" style="fill:var(--sky-bg);stroke:var(--sky-mid)" stroke-width="1.5"/>';
+      }).join('') +
+      // 꽃
+      [[270, 158, '#ff8fa3'], [290, 164, '#ffc933'], [310, 156, '#b69cff'], [96, 164, '#ffc933'], [22, 162, '#ff8fa3']].map(function (f) {
+        return '<line x1="' + f[0] + '" y1="' + f[1] + '" x2="' + f[0] + '" y2="' + (f[1] + 10) + '" stroke="#6cbf8a" stroke-width="2"/>' +
+          '<circle cx="' + f[0] + '" cy="' + f[1] + '" r="4.5" fill="' + f[2] + '"/><circle cx="' + f[0] + '" cy="' + f[1] + '" r="1.6" fill="#fff"/>';
+      }).join('') +
+      '</svg></div>';
+  }
+
   // 첫 화면: 큰 버튼 세 개(관찰 기록·출결·일정)만
   function renderHome(body) {
     const d = st.date;
@@ -268,7 +326,8 @@ DN.Mobile = (function () {
       '<div class="m-actions home">' +
         '<button class="m-action obs" id="mGoObs"><span>📝</span>관찰 기록</button>' +
         '<button class="m-action att" id="mGoAtt"><span>🗓️</span>출결</button>' +
-        '<button class="m-action ev" id="mGoEv"><span>📌</span><b>일정' + (n ? '<i class="m-badge">' + n + '</i>' : '') + '</b></button></div>';
+        '<button class="m-action ev" id="mGoEv"><span>📌</span><b>일정' + (n ? '<i class="m-badge">' + n + '</i>' : '') + '</b></button></div>' +
+      homeIllust();
     bindInstall(body);
     body.querySelector('#mGoObs').addEventListener('click', function () { go('obs'); });
     body.querySelector('#mGoAtt').addEventListener('click', function () { go('att'); });
