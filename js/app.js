@@ -71,28 +71,40 @@ DN.App = (function () {
     if (!('serviceWorker' in navigator)) return;
     const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
     if (location.protocol !== 'https:' && !(local && /[?&]sw=1/.test(location.search))) return;
+    // 자동 업데이트: 새 버전이 적용되면 화면을 새로 고친다. 글을 쓰는 중이거나 창이 열려 있으면 끝날 때까지 기다린다
+    const hadController = !!navigator.serviceWorker.controller;
     let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', function () {
+    const busy = function () {
+      const a = document.activeElement;
+      return !!document.getElementById('dnModal') || !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+    };
+    const reloadWhenIdle = function () {
       if (reloading) return;
+      if (busy() && document.visibilityState === 'visible') { setTimeout(reloadWhenIdle, 2000); return; }
       reloading = true;
+      try { sessionStorage.setItem('dn_updated', '1'); } catch (e) {}
       location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (hadController) reloadWhenIdle();   // 처음 설치 때는 새로 고칠 필요 없음
     });
+    try {
+      if (sessionStorage.getItem('dn_updated') === '1') {
+        sessionStorage.removeItem('dn_updated');
+        setTimeout(function () { DN.utils.toast('✨ 새 버전으로 바뀌었어요.', 'success'); }, 600);
+      }
+    } catch (e) {}
     navigator.serviceWorker.register('sw.js').then(function (reg) {
-      const offer = function (worker) {
-        const el = document.getElementById('update');
-        el.hidden = false;
-        el.innerHTML = '<span>✨ 새 버전이 있어요.</span><button class="btn-primary" id="updateNow">새로고침</button>';
-        el.querySelector('#updateNow').addEventListener('click', function () { worker.postMessage('skipWaiting'); });
-      };
-      if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
-      reg.addEventListener('updatefound', function () {
-        const w = reg.installing;
-        if (!w) return;
-        w.addEventListener('statechange', function () {
-          // 처음 설치가 아니라(이미 이 페이지를 관리하는 워커가 있을 때) 새 버전이 준비된 경우만 안내
-          if (w.state === 'installed' && navigator.serviceWorker.controller) offer(w);
-        });
+      // 예전 방식 워커가 새 버전을 받아 두고 기다리는 중이면 바로 적용
+      if (reg.waiting) reg.waiting.postMessage('skipWaiting');
+      // 핸드폰은 앱을 닫지 않고 다시 여는 일이 많으므로, 화면으로 돌아올 때마다 새 버전을 확인 (1분에 한 번까지)
+      let last = Date.now();
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible' || Date.now() - last < 60000) return;
+        last = Date.now();
+        reg.update().catch(function () {});
       });
+      setInterval(function () { if (document.visibilityState === 'visible') reg.update().catch(function () {}); }, 30 * 60 * 1000);
     }).catch(function () { /* 서비스 워커가 없어도 앱은 그대로 동작 */ });
   }
 

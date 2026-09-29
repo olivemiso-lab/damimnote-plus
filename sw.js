@@ -1,9 +1,9 @@
 // ════════════════════════════════════════════════════
 //  담임노트+ · 서비스 워커 — 앱 파일을 캐시해 오프라인에서도 열리게 한다
-//  ⚠ 배포할 때마다 VERSION을 올릴 것. 그래야 교사 화면에 “새 버전이 있어요” 안내가 뜬다.
+//  ⚠ 배포할 때마다 VERSION을 올릴 것. 그래야 교사 기기가 새 버전을 받아 저절로 바뀐다.
 //  데이터(localStorage·IndexedDB)는 건드리지 않는다. 외부 요청 없음.
 // ════════════════════════════════════════════════════
-const VERSION = '2026-09-29-1';
+const VERSION = '2026-09-29-2';
 const CACHE = 'damimnote-' + VERSION;
 
 // 설치할 때 미리 받아 두는 앱 파일. 하나라도 없으면 설치가 실패하므로 파일을 추가·삭제하면 여기도 고칠 것
@@ -42,12 +42,12 @@ const APP_FILES = [
 self.addEventListener('install', function (e) {
   // cache: 'reload' — 브라우저의 HTTP 캐시(GitHub Pages는 10분)를 건너뛰고 서버에서 새 파일을 받는다.
   // 이게 없으면 새 버전 설치 때 옛 파일이 저장되어, 새로고침해도 예전 화면이 남을 수 있다.
+  // 다 받으면 기다리지 않고 바로 새 버전으로 — 화면은 app.js가 입력 중이 아닐 때 새로 고친다
   e.waitUntil(caches.open(CACHE).then(function (c) {
     return c.addAll(APP_FILES.map(function (u) { return new Request(u, { cache: 'reload' }); }));
-  }));
+  }).then(function () { return self.skipWaiting(); }));
 });
 
-// 새 버전은 교사가 [새로고침]을 누를 때 적용 (쓰던 화면이 갑자기 바뀌지 않게)
 self.addEventListener('message', function (e) {
   if (e.data === 'skipWaiting') self.skipWaiting();
 });

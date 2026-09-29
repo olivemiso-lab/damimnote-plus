@@ -260,25 +260,19 @@ DN.Mobile = (function () {
       (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span>' +
       (e.source === 'mobile' ? '<button class="m-ev-del" data-evdel="' + esc(e.id) + '" aria-label="일정 지우기">✕</button>' : '') + '</li>';
   }
-  // 첫 화면: 큰 버튼 세 개(관찰 기록·출결·일정) + 접었다 펴는 오늘 시간표
+  // 첫 화면: 큰 버튼 세 개(관찰 기록·출결·일정)만
   function renderHome(body) {
     const d = st.date;
     const n = E.onDate(myGradeEvents(), d).filter(function (e) { return !(e.done && E.isTask(e)); }).length;
-    const tt = DN.Weekly.forDate(d);
-    const ttOpen = DN.Store.getMeta('mTtOpen') !== '0';
     body.innerHTML = homeInstallCard() +
-      '<div class="m-actions three">' +
+      '<div class="m-actions home">' +
         '<button class="m-action obs" id="mGoObs"><span>📝</span>관찰 기록</button>' +
         '<button class="m-action att" id="mGoAtt"><span>🗓️</span>출결</button>' +
-        '<button class="m-action ev" id="mGoEv"><span>📌</span><b>일정' + (n ? '<i class="m-badge">' + n + '</i>' : '') + '</b></button></div>' +
-      (tt ? '<details class="m-card m-tt" id="mTt"' + (ttOpen ? ' open' : '') + '><summary>🕘 ' + (d === today() ? '오늘' : mdw(d)) + ' 시간표</summary>' +
-        DN.Weekly.dayListHtml(tt) + '</details>' : '');
+        '<button class="m-action ev" id="mGoEv"><span>📌</span><b>일정' + (n ? '<i class="m-badge">' + n + '</i>' : '') + '</b></button></div>';
     bindInstall(body);
     body.querySelector('#mGoObs').addEventListener('click', function () { go('obs'); });
     body.querySelector('#mGoAtt').addEventListener('click', function () { go('att'); });
     body.querySelector('#mGoEv').addEventListener('click', function () { go('ev'); });
-    const ttBox = body.querySelector('#mTt');
-    if (ttBox) ttBox.addEventListener('toggle', function () { DN.Store.setMeta('mTtOpen', ttBox.open ? '1' : '0'); });
   }
 
   // 일정 화면: [＋ 일정 넣기] + 그날 일정 + 이번 주 우리 학년 일정
@@ -296,9 +290,14 @@ DN.Mobile = (function () {
       if (on.length) days.push({ d: x, list: on });
     }
     const grade = DN.Settings.get().grade;
+    // 그날 시간표는 일정 화면 안에서 접었다 편다 (첫 화면은 버튼만)
+    const tt = DN.Weekly.forDate(d);
+    const ttOpen = DN.Store.getMeta('mTtOpen') === '1';
     body.innerHTML = '<button class="btn-primary m-big m-ev-bigadd" id="mEvAdd">＋ 일정 넣기</button>' +
       '<section class="m-card"><h2>' + (d === today() ? '오늘' : mdw(d)) + ' <small>' + (d === today() ? mdw(d) : '') + '</small></h2>' +
         (todays.length ? '<ul class="m-list">' + todays.map(evLine).join('') + '</ul>' : '<p class="m-empty">일정이 없어요.</p>') + '</section>' +
+      (tt ? '<details class="m-card m-tt" id="mTt"' + (ttOpen ? ' open' : '') + '><summary>🕘 ' + (d === today() ? '오늘' : mdw(d)) + ' 시간표</summary>' +
+        DN.Weekly.dayListHtml(tt) + '</details>' : '') +
       '<section class="m-card"><h2>이번 주 ' + grade + '학년 일정 <small>' + md(w.start) + '~' + md(w.end) + '</small></h2>' +
         (days.length ? days.map(function (x) {
           const hol = x.list.some(function (e) { return e.kind === 'holiday'; });
@@ -307,6 +306,8 @@ DN.Mobile = (function () {
         }).join('') : '<p class="m-empty">이번 주 일정이 없어요.</p>') + '</section>' +
       (doneCount ? '<button class="m-link" id="mShowDone">' + (st.showDone ? '완료한 일정 숨기기' : '완료한 일정 ' + doneCount + '개 보기') + '</button>' : '');
     body.querySelector('#mEvAdd').addEventListener('click', openEventAdd);
+    const ttBox = body.querySelector('#mTt');
+    if (ttBox) ttBox.addEventListener('toggle', function () { DN.Store.setMeta('mTtOpen', ttBox.open ? '1' : '0'); });
     const sd = body.querySelector('#mShowDone');
     if (sd) sd.addEventListener('click', function () { st.showDone = !st.showDone; render(rootEl); });
     body.addEventListener('click', function (e) {
