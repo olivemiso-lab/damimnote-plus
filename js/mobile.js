@@ -280,41 +280,23 @@ DN.Mobile = (function () {
     const n = Math.floor(t.getTime() / 86400000);
     const msg = (n % 2 === 0 && DAY_CHEERS[t.getDay()]) || CHEERS[n % CHEERS.length];
     return '<div class="m-illust"><p class="m-cheer">' + esc(msg) + '</p>' +
-      '<svg viewBox="0 0 360 190" role="img" aria-label="학교 그림">' +
-      // 해
-      '<g class="il-sun"><circle cx="300" cy="44" r="20" style="fill:var(--lemon-mid)"/>' +
-      [0, 45, 90, 135, 180, 225, 270, 315].map(function (a) {
-        const r = a * Math.PI / 180, x1 = 300 + Math.cos(r) * 27, y1 = 44 + Math.sin(r) * 27, x2 = 300 + Math.cos(r) * 35, y2 = 44 + Math.sin(r) * 35;
-        return '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" style="stroke:var(--lemon-mid)" stroke-width="4" stroke-linecap="round"/>';
-      }).join('') + '</g>' +
-      // 구름
-      '<g class="il-cloud" fill="#fff" style="stroke:var(--line-strong)" stroke-width="1.5">' +
-      '<path d="M40 58 a14 14 0 0 1 26 -8 a12 12 0 0 1 22 6 a10 10 0 0 1 -2 20 h-44 a10 10 0 0 1 -2 -18z"/>' +
-      '<path d="M200 34 a11 11 0 0 1 20 -6 a9 9 0 0 1 17 5 a8 8 0 0 1 -2 15 h-34 a8 8 0 0 1 -1 -14z"/></g>' +
-      // 언덕
-      '<path d="M0 160 Q90 120 180 150 T360 140 V190 H0z" style="fill:var(--mint-bg)"/>' +
-      '<path d="M0 172 Q120 150 240 168 T360 162 V190 H0z" fill="#bfe8cf" opacity=".8"/>' +
-      // 나무
-      '<rect x="52" y="120" width="8" height="30" rx="3" fill="#b98556"/>' +
-      '<circle cx="44" cy="120" r="12" fill="#6cbf8a"/><circle cx="56" cy="110" r="20" fill="#8fd4a8"/>' +
-      '<circle cx="50" cy="106" r="3" fill="#ff8fa3"/><circle cx="64" cy="116" r="3" fill="#ff8fa3"/>' +
-      // 학교
-      '<rect x="120" y="96" width="120" height="58" rx="6" style="fill:var(--peach-bg);stroke:var(--peach-mid)" stroke-width="2"/>' +
-      '<rect x="160" y="70" width="40" height="84" rx="5" style="fill:var(--paper);stroke:var(--peach-mid)" stroke-width="2"/>' +
-      '<path d="M154 72 L180 50 L206 72z" style="fill:var(--peach-ink)" opacity=".85"/>' +
-      '<line x1="180" y1="50" x2="180" y2="32" stroke="#8a7a70" stroke-width="2"/><path d="M180 32 h14 l-4 5 l4 5 h-14z" fill="#ff8fa3"/>' +
-      '<circle cx="180" cy="90" r="9" fill="#fff" style="stroke:var(--peach-mid)" stroke-width="2"/>' +
-      '<path d="M180 90 V84 M180 90 H185" stroke="#8a7a70" stroke-width="1.8" stroke-linecap="round"/>' +
-      '<rect x="171" y="128" width="18" height="26" rx="3" style="fill:var(--peach-mid)"/>' +
-      [132, 146, 214, 228].map(function (x) {
-        return '<rect x="' + x + '" y="108" width="12" height="12" rx="2" style="fill:var(--sky-bg);stroke:var(--sky-mid)" stroke-width="1.5"/>' +
-          '<rect x="' + x + '" y="128" width="12" height="12" rx="2" style="fill:var(--sky-bg);stroke:var(--sky-mid)" stroke-width="1.5"/>';
-      }).join('') +
-      // 꽃
-      [[270, 158, '#ff8fa3'], [290, 164, '#ffc933'], [310, 156, '#b69cff'], [96, 164, '#ffc933'], [22, 162, '#ff8fa3']].map(function (f) {
-        return '<line x1="' + f[0] + '" y1="' + f[1] + '" x2="' + f[0] + '" y2="' + (f[1] + 10) + '" stroke="#6cbf8a" stroke-width="2"/>' +
-          '<circle cx="' + f[0] + '" cy="' + f[1] + '" r="4.5" fill="' + f[2] + '"/><circle cx="' + f[0] + '" cy="' + f[1] + '" r="1.6" fill="#fff"/>';
-      }).join('') +
+      '<svg viewBox="0 0 360 170" role="img" aria-label="선생님 책상 그림">' +
+      // 바닥 그림자와 뒤의 옅은 동그라미
+      '<ellipse cx="180" cy="150" rx="150" ry="10" style="fill:var(--line)"/>' +
+      '<circle cx="92" cy="92" r="46" style="fill:var(--peach-bg)" opacity=".7"/>' +
+      '<circle cx="268" cy="80" r="34" style="fill:var(--sky-bg)" opacity=".8"/>' +
+      // 선으로 그린 화분 · 펼친 책 · 연필 · 머그컵
+      '<g fill="none" style="stroke:var(--ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<line x1="40" y1="146" x2="320" y2="146"/>' +
+      '<path d="M110 146 L110 118 Q140 110 170 120 L170 146"/><path d="M230 146 L230 118 Q200 110 170 120"/>' +
+      '<path d="M118 128 Q140 122 160 128 M118 136 Q140 130 160 136 M180 128 Q200 122 222 128"/>' +
+      '<path d="M252 146 V116 H284 V146 Z"/><path d="M284 124 Q298 124 298 132 Q298 140 284 140"/>' +
+      '<path class="il-steam" d="M262 104 Q266 98 262 92 M272 104 Q276 98 272 92"/>' +
+      '<path d="M62 146 L66 124 H90 L94 146 Z"/><path d="M78 124 V104"/>' +
+      '<path d="M78 110 Q66 100 64 90 Q76 94 78 106"/><path d="M78 108 Q88 96 94 94 Q92 106 78 112"/>' +
+      '<path d="M186 141 L236 129"/></g>' +
+      '<path d="M252 132 H284" style="stroke:var(--peach-mid)" stroke-width="6"/>' +
+      '<path d="M68 132 H92" style="stroke:var(--mint-ink)" stroke-width="3" opacity=".35"/>' +
       '</svg></div>';
   }
 

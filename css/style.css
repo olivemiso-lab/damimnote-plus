@@ -736,11 +736,9 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .m-illust { margin-top: 18px; text-align: center; }
 .m-cheer { font-size: 14.5px; font-weight: 800; color: var(--ink-sub); margin-bottom: 4px; }
 .m-illust svg { width: 100%; max-width: 420px; height: auto; display: block; margin: 0 auto; }
-.m-illust .il-cloud { animation: il-drift 9s ease-in-out infinite alternate; }
-.m-illust .il-sun { transform-origin: 300px 44px; animation: il-spin 30s linear infinite; }
-@keyframes il-drift { from { transform: translateX(-6px); } to { transform: translateX(8px); } }
-@keyframes il-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .m-illust .il-cloud, .m-illust .il-sun { animation: none; } }
+.m-illust .il-steam { animation: il-steam 2.6s ease-in-out infinite; }
+@keyframes il-steam { 0%, 100% { opacity: .25; transform: translateY(2px); } 50% { opacity: 1; transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .m-illust .il-steam { animation: none; } }
 /* 네이비: 핸드폰 윗줄이 남색이므로 글자를 밝게 */
 html[data-look="navy"] .m-head { border-bottom-color: #1e3a6e; }
 html[data-look="navy"] .m-brand, html[data-look="navy"] .m-back { color: #fff; }
