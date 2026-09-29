@@ -169,7 +169,7 @@ DN.Settings = (function () {
         <div class="set-actions"><button class="btn-primary" id="setSave">저장</button></div>\
         <div class="section-label">첨부 파일 저장 공간</div>\
         <p class="set-help" id="setFiles">계산 중…</p>\
-        <p class="set-meta">데이터 형식 버전 ' + esc(s.schemaVersion) + ' · <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a></p>\
+        <p class="set-meta">데이터 형식 버전 ' + esc(s.schemaVersion) + ' · <a href="guide.html" target="_blank" rel="noopener">📖 사용 설명서</a> · <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a></p>\
       </div>';
 
     bindLookPicker(container);

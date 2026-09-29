@@ -82,6 +82,9 @@ input, select, textarea { font-family: inherit; font-size: 13.5px; color: var(--
 .nav-ic { font-size: 16px; }
 
 .side-foot { font-size: 10.5px; color: var(--ink-sub); padding: 10px 10px 0; line-height: 1.6; opacity: 0.85; }
+.side-foot a { color: inherit; font-size: 12.5px; font-weight: 800; text-decoration: none; }
+.side-foot a:hover { text-decoration: underline; }
+.m-menu-btns .m-guide-link { text-decoration: none; display: inline-flex; align-items: center; }
 
 .main { flex: 1; min-width: 0; padding: 26px 30px 60px; max-width: 1180px; }
 

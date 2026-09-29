@@ -579,6 +579,7 @@ DN.Mobile = (function () {
       '<div class="m-menu-btns">' +
         '<button class="btn-ghost" id="mnBackup">기록 백업 파일 받기</button>' +
         (isPhone() ? '' : '<button class="btn-ghost" id="mnDesktop">PC 화면으로 보기</button>') +
+        '<a class="btn-ghost m-guide-link" href="guide.html" target="_blank" rel="noopener">📖 사용 설명서</a>' +
       '</div>' + installGuide();
     const m = openModal('설정', body, '<span class="pv-spacer"></span><button class="btn-cancel" data-close>닫기</button><button class="btn-primary" id="mnSave">저장</button>');
     rootEl = rootEl || document.getElementById('view');

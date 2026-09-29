@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>담임노트+ 사용 설명서</title>
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <style>
+    :root { --ink: #3b3531; --sub: #7d716a; --line: #f0e6da; --brand: #c85a33; --peach: #ffe2d3; --sky: #dff0fb; --mint: #dcf3e6; --lemon: #fff3c4; --sky-ink: #1f5f8b; --mint-ink: #22704a; --lemon-ink: #7a5a00; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: #fdfaf5; color: var(--ink); line-height: 1.75; margin: 0; padding: 20px 16px 70px; font-size: 15px; }
+    main { max-width: 760px; margin: 0 auto; }
+    header.top { text-align: center; padding: 18px 0 8px; }
+    header.top img { width: 72px; height: 72px; border-radius: 18px; }
+    h1 { font-size: 26px; margin: 10px 0 4px; }
+    h1 .plus { color: var(--sky-ink); }
+    .lead { color: var(--sub); margin: 0 0 18px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; margin: 16px 0; }
+    h2 { font-size: 19px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+    h2 .no { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--peach); color: var(--brand); font-size: 14px; }
+    h3 { font-size: 16px; margin: 20px 0 6px; }
+    p { margin: 6px 0; }
+    ol, ul { margin: 6px 0; padding-left: 22px; }
+    li { margin: 3px 0; }
+    b.btn { display: inline-block; font-weight: 800; background: #f6f1ea; border: 1px solid #e6d6c3; border-radius: 8px; padding: 0 7px; font-size: 13.5px; line-height: 1.6; }
+    .tip, .warn, .ok { border-radius: 12px; padding: 10px 14px; margin: 10px 0; font-size: 14px; }
+    .tip { background: var(--sky); color: var(--sky-ink); }
+    .ok { background: var(--mint); color: var(--mint-ink); }
+    .warn { background: var(--lemon); color: var(--lemon-ink); }
+    nav.toc { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 14px; }
+    nav.toc a { color: var(--ink); text-decoration: none; padding: 6px 10px; border-radius: 10px; background: #fbf6ef; font-weight: 700; font-size: 14px; }
+    nav.toc a:hover { background: var(--peach); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0; }
+    th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+    th { background: #fbf6ef; white-space: nowrap; }
+    .qa dt { font-weight: 800; margin-top: 12px; }
+    .qa dd { margin: 2px 0 0 0; color: var(--ink); }
+    a { color: var(--sky-ink); }
+    .go { display: block; text-align: center; background: var(--brand); color: #fff; font-weight: 800; text-decoration: none; border-radius: 14px; padding: 13px; margin: 14px 0 4px; }
+    footer { text-align: center; color: var(--sub); font-size: 13px; margin-top: 26px; }
+  </style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <img src="icons/icon-192.png" alt="">
+    <h1>📒 담임노트<span class="plus">+</span> 사용 설명서</h1>
+    <p class="lead">핸드폰으로 톡톡 기록하고, PC에서 정리하는 초등 담임 노트</p>
+  </header>
+
+  <div class="card">
+    <p><b>담임노트+</b>는 초등 담임 선생님을 위한 무료 웹앱이에요. 회원가입이 없고, 개발자 서버도 없어요.</p>
+    <ul>
+      <li>📱 <b>핸드폰</b>: 교실에서 번호 누르고 버튼 하나로 <b>관찰 기록·출결 메모·일정</b>을 남겨요.</li>
+      <li>💻 <b>PC</b>: 모인 기록을 학생별로 보고, <b>통지표 참고 글 복사·엑셀로 받기</b>, 자리·모둠 배치, 학교 일정·시간표 정리를 해요.</li>
+      <li>☁️ <b>동기화</b>: 선생님 본인 구글 드라이브의 숨김 폴더로 핸드폰 ↔ PC 기록이 저절로 오가요. <b>학생 이름은 올라가지 않아요.</b></li>
+    </ul>
+    <a class="go" href="./">담임노트+ 열기 →</a>
+  </div>
+
+  <div class="card">
+    <h2>📑 차례</h2>
+    <nav class="toc">
+      <a href="#start">1. 처음 시작하기</a>
+      <a href="#phone">2. 핸드폰으로 기록하기</a>
+      <a href="#pc">3. PC에서 정리하기</a>
+      <a href="#sync">4. 구글 동기화</a>
+      <a href="#backup">5. 백업과 설정</a>
+      <a href="#safe">6. 개인정보 안내</a>
+      <a href="#faq">7. 자주 묻는 질문</a>
+    </nav>
+  </div>
+
+  <!-- 1. 시작 -->
+  <div class="card" id="start">
+    <h2><span class="no">1</span>처음 시작하기</h2>
+
+    <h3>💻 PC</h3>
+    <ol>
+      <li>크롬(또는 엣지)에서 <a href="./">담임노트+ 주소</a>를 열어요.</li>
+      <li>왼쪽 메뉴 <b class="btn">⚙️ 설정</b>에서 <b>학년·반·학생 수</b>를 넣고 저장해요.</li>
+      <li>(선택) <b class="btn">👦 학생 관리</b>에 이름을 넣으면 PC 화면에 이름이 함께 보여요. 이름 없이 번호로만 써도 돼요.</li>
+    </ol>
+
+    <h3>📱 핸드폰</h3>
+    <ol>
+      <li><b>크롬</b>(아이폰은 <b>사파리</b>)으로 주소를 열어요.
+        <div class="warn">카톡·스레드 안에서 링크를 누르면 그 앱 안의 브라우저로 열려요. 그 안에서는 앱 설치와 구글 연결이 안 되니, 화면에 뜨는 <b class="btn">크롬으로 열기</b>를 눌러 주세요.</div></li>
+      <li>첫 화면 맨 위 <b class="btn">앱 설치하기</b>를 눌러 바탕화면에 아이콘을 만들어요.
+        <ul>
+          <li>버튼이 안 보이면: 크롬 <b>⋮</b> → <b>설치 및 바로가기 만들기</b>(또는 홈 화면에 추가)</li>
+          <li>아이폰: 사파리 <b>공유(□↑)</b> → <b>홈 화면에 추가</b> — <b>아이폰은 꼭 추가해 주세요.</b> 추가하지 않고 쓰면 오래 안 열었을 때 기록이 지워질 수 있어요.</li>
+          <li>아이콘에 작은 크롬 표시가 붙어도 괜찮아요. 기능은 똑같아요.</li>
+        </ul></li>
+      <li>바탕화면 아이콘으로 열고 <b>학생 수</b>를 넣은 뒤, <b>“이 기기는 핸드폰이에요”</b>를 체크하고 시작해요.</li>
+    </ol>
+
+    <h3>☁️ 핸드폰과 PC 잇기</h3>
+    <ol>
+      <li>PC: <b class="btn">🔄 핸드폰 연결</b> → <b class="btn">구글로 연결</b></li>
+      <li>핸드폰: <b class="btn">⚙️</b> → 구글 드라이브 → <b class="btn">구글로 연결</b></li>
+      <li><b>두 기기 모두 같은 구글 계정</b>으로 연결해요.</li>
+    </ol>
+    <div class="tip">처음 연결할 때 “Google에서 확인하지 않은 앱” 화면이 나오면 <b>고급 → 담임노트+(으)로 이동 → 허용</b>을 누르세요. 담임노트+는 선생님 드라이브의 <b>앱 전용 숨김 폴더</b>만 쓰고, 다른 파일은 볼 수 없어요.</div>
+  </div>
+
+  <!-- 2. 핸드폰 -->
+  <div class="card" id="phone">
+    <h2><span class="no">2</span>핸드폰으로 기록하기</h2>
+    <p>첫 화면에는 큰 버튼 세 개가 있어요: <b class="btn">📝 관찰 기록</b> <b class="btn">🗓️ 출결</b> <b class="btn">📌 일정</b>. 위쪽 날짜를 바꾸면 그날 기록으로 남아요.</p>
+
+    <h3>📝 관찰 기록</h3>
+    <ol>
+      <li><b>① 번호</b>를 눌러요. 여러 명을 한꺼번에 골라도 돼요.</li>
+      <li><b>② 상황 버튼</b>(참여·관계·태도)을 누르면 <b>바로 저장</b>돼요.</li>
+      <li>버튼에 없는 내용은 아래 <b>✏️ 직접 쓰기</b>에 써서 저장해요. 예: 3번 → “활동 후 뒷정리를 잘함”</li>
+      <li>잘못 눌렀으면 아래에 잠깐 뜨는 <b class="btn">되돌리기</b>를 눌러요.</li>
+    </ol>
+    <div class="ok">🤝 <b>다툼은 자리·모둠과 이어져요.</b> 다툰 두 학생을 함께 고르고 “친구와 다툼”을 누르거나, 5번을 고르고 직접 쓰기에 “7번 학생을 때림”처럼 번호를 쓰면, PC 자리·모둠 화면에 <b>“5번 ↔ 7번 떼어 놓기”</b> 추천이 떠요. 떼어 놓을지는 선생님이 정해요.</div>
+
+    <h3>🗓️ 출결</h3>
+    <ol>
+      <li><b>① 번호</b> → <b>② 유형</b>(결석·지각·조퇴·결과) → <b>③ 사유</b>(질병·미인정·출석인정·기타) → <b class="btn">저장</b></li>
+    </ol>
+    <div class="warn">나이스 입력 전 확인용 메모예요. 공식 출결은 나이스에 입력하세요. 병명 같은 구체적 사유는 적지 말고 분류만 남겨 주세요.</div>
+
+    <h3>📌 일정</h3>
+    <ul>
+      <li><b class="btn">＋ 일정 넣기</b>: 갑자기 잡힌 회의 등을 넣어요. 날짜는 [오늘·내일·모레], 시간은 [아침 8:30·점심 12:40·3시·4시]를 누르거나 직접 골라요.</li>
+      <li>핸드폰에서 넣은 일정은 구글로 연결돼 있으면 <b>PC 학교 일정에도 들어가요.</b></li>
+      <li>끝난 일정은 앞의 칸을 체크하면 목록에서 숨겨져요. 아래 “완료한 일정 보기”로 다시 볼 수 있어요.</li>
+      <li><b>🕘 오늘 시간표</b>는 일정 화면에서 눌러 펼쳐 봐요. (PC에서 주간학습안내를 가져오면 생겨요)</li>
+    </ul>
+  </div>
+
+  <!-- 3. PC -->
+  <div class="card" id="pc">
+    <h2><span class="no">3</span>PC에서 정리하기</h2>
+    <table>
+      <tr><th>메뉴</th><th>할 수 있는 일</th></tr>
+      <tr><td>👦 학생 관리</td><td>번호·이름(선택)·성별·학습 특성 입력. 엑셀·한글 표를 복사해 <b>한꺼번에 붙여 넣기</b> 가능</td></tr>
+      <tr><td>🗓️ 출결 메모</td><td>달별 출결 표, 칸을 눌러 고치기, <b>월 요약 복사</b>(나이스 마감 대조), <b>📥 ○월 엑셀 / 학년도 전체 엑셀</b></td></tr>
+      <tr><td>📝 관찰 기록</td><td>PC에서도 빠른 기록·직접 쓰기. <b>학생별 기록</b>을 기간(이번 달·학기·학년도)별로 보고, <b>📋 복사</b>로 통지표 참고 글 만들기, <b>📥 엑셀로 받기</b>, <b>상황 버튼 편집</b></td></tr>
+      <tr><td>🪑 자리·모둠</td><td>학생 수만 넣어도 번호로 <b>자동 배치</b>. 학습수준·리더·남녀·시력 고려, <b>갈등 관계(떼어 놓기)·필수 동행</b>, 관찰 기록 다툼 추천, 배치 저장·인쇄</td></tr>
+      <tr><td>📅 학교 일정</td><td><b>월중행사 가져오기</b>(한글 .hwp/.hwpx), <b>주간학습안내 가져오기</b> → 시간표(<b>간단히/자세히</b>), 달력·목록 보기, 우리 학년만·내 담당만, 일정 직접 추가, 첨부 파일</td></tr>
+      <tr><td>🔄 핸드폰 연결</td><td>구글 연결·지금 동기화. 구글 없이 파일로 옮기는 방법도 있어요</td></tr>
+      <tr><td>💾 백업</td><td>기록 백업(JSON), 파일 포함 백업(ZIP), 복원, 학생 명단 CSV</td></tr>
+      <tr><td>⚙️ 설정</td><td>화면 스타일, 학년·반·학생 수, 담당자 이름(“내 담당” 표시용)</td></tr>
+    </table>
+    <div class="tip">📋 <b>통지표·생활기록부 쓸 때</b>: 관찰 기록 → 학생 고르기 → 기간 “이번 학기” → <b>📋 복사</b>. 상황별 횟수와 날짜별 기록이 줄글로 복사돼요. 반 전체를 한 번에 보려면 <b>📥 엑셀로 받기</b>.</div>
+  </div>
+
+  <!-- 4. 동기화 -->
+  <div class="card" id="sync">
+    <h2><span class="no">4</span>구글 동기화 알아두기</h2>
+    <ul>
+      <li><b>핸드폰</b>: 기록하면 몇 초 뒤 저절로 올라가요.</li>
+      <li><b>PC</b>: 켜져 있으면 5분마다 저절로 받아요. 바로 보고 싶으면 <b class="btn">지금 동기화</b>.</li>
+      <li>구글 로그인은 <b>1시간</b> 유지돼요. 앱을 새로 열었을 때 “[동기화]를 눌러 이어 주세요”가 보이면 <b class="btn">동기화</b>를 한 번 눌러 주세요.</li>
+      <li><b>오가는 것</b>: 핸드폰 → PC는 관찰·출결 기록, 핸드폰에서 넣은 일정, 완료 체크 / PC → 핸드폰은 학교 일정, 시간표, 상황 버튼, 학년·학생 수</li>
+      <li><b>PC는 한 대</b>를 주 PC로 써요. 다른 PC에서 연결하면 “이 PC를 주 PC로 바꿀까요?”라고 물어요. 취소하면 그 PC는 핸드폰 기록을 받기만 해요.</li>
+    </ul>
+  </div>
+
+  <!-- 5. 백업·설정 -->
+  <div class="card" id="backup">
+    <h2><span class="no">5</span>백업과 설정</h2>
+    <ul>
+      <li>기록은 <b>사용하는 브라우저 안</b>에 저장돼요. 브라우저 데이터를 지우거나 PC를 바꾸면 사라질 수 있으니 <b class="btn">💾 백업</b>에서 가끔 백업 파일을 받아 두세요. 오래 안 받으면 위에 알림이 떠요.</li>
+      <li>첨부 파일까지 옮기려면 <b>파일 포함 백업(ZIP)</b>을 쓰세요.</li>
+      <li><b>화면 스타일</b>: ⚙️ 설정에서 귀여운 · 맑은 하늘 · 민트 · 블랙&amp;오렌지 · 네이비 중에 골라요. PC와 핸드폰은 따로 정할 수 있어요.</li>
+      <li><b>업데이트</b>는 저절로 돼요. 새 버전이 나오면 앱을 열 때 바뀌고 “✨ 새 버전으로 바뀌었어요”가 잠깐 떠요. 글을 쓰는 중에는 기다렸다가 바꿔요.</li>
+    </ul>
+  </div>
+
+  <!-- 6. 개인정보 -->
+  <div class="card" id="safe">
+    <h2><span class="no">6</span>개인정보 안내</h2>
+    <ul>
+      <li>개발자에게 전송되는 정보는 <b>없어요.</b> 광고·통계 도구도 쓰지 않아요.</li>
+      <li>구글 드라이브에는 <b>번호·날짜·상황</b>만 올라가요. 학생 이름, 담당 교직원 이름, 메모, 첨부 파일은 올라가지 않아요.</li>
+      <li>핸드폰 화면에는 학생 이름이 나오지 않아요(번호만).</li>
+      <li>학생 정보는 학교의 개인정보 관련 규정에 맞게 관리해 주세요.</li>
+    </ul>
+    <p>자세한 내용은 <a href="privacy.html">개인정보처리방침</a>을 보세요.</p>
+  </div>
+
+  <!-- 7. FAQ -->
+  <div class="card" id="faq">
+    <h2><span class="no">7</span>자주 묻는 질문</h2>
+    <dl class="qa">
+      <dt>핸드폰 기록이 PC에 안 들어와요.</dt>
+      <dd>① 두 기기가 <b>같은 구글 계정</b>인지 ② 핸드폰에서 <b>동기화</b>를 눌렀을 때 “기록 ○건 보냄”이 뜨는지 ③ 핸드폰이 <b>카톡 안 브라우저가 아닌지</b>(크롬/설치한 앱) ④ 핸드폰 ⚙️에서 “이 기기는 핸드폰이에요”가 체크돼 있는지 확인한 뒤, PC에서 <b>지금 동기화</b>를 눌러 보세요.</dd>
+      <dt>“[동기화]를 눌러 이어 주세요”가 계속 떠요.</dt>
+      <dd>구글 로그인이 1시간 지나 끊긴 거예요. 동기화를 한 번 누르면 다시 이어져요. 기록은 그대로예요.</dd>
+      <dt>핸드폰을 바꿨어요.</dt>
+      <dd>새 핸드폰에서 설치하고 같은 구글 계정으로 연결하면 PC의 일정·시간표가 들어와요. 옛 핸드폰에서 보내지 않은 기록이 있다면 먼저 옛 핸드폰에서 동기화해 주세요.</dd>
+      <dt>PC 화면이 좁아서 핸드폰 화면처럼 나와요.</dt>
+      <dd>핸드폰 화면의 ⚙️ → <b>PC 화면으로 보기</b>를 누르거나 창을 넓혀 주세요.</dd>
+      <dt>상황 버튼을 우리 반에 맞게 바꾸고 싶어요.</dt>
+      <dd>PC 관찰 기록 → <b>상황 버튼 편집</b>에서 고치거나 새로 만들어요. 동기화하면 핸드폰에도 똑같이 들어가요.</dd>
+      <dt>돈이 드나요?</dt>
+      <dd>무료예요. 회원가입도 필요 없어요.</dd>
+    </dl>
+  </div>
+
+  <footer>
+    문의·제안: <a href="https://github.com/olivemiso-lab/damimnote-plus/issues">담임노트+ 문의 게시판</a> · <a href="privacy.html">개인정보처리방침</a><br>
+    오늘도 수고 많으셨어요, 선생님 🍀
+  </footer>
+</main>
+</body>
+</html>
