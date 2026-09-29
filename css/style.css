@@ -119,7 +119,7 @@ input, select, textarea { font-family: inherit; font-size: 13.5px; color: var(--
 .frow.col { flex-direction: column; align-items: stretch; }
 .frow label { font-size: 12.5px; font-weight: 700; color: var(--ink-sub); flex-shrink: 0; }
 
-input:not([type]), input[type="text"], input[type="number"], input[type="date"], select, textarea {
+input:not([type]), input[type="text"], input[type="number"], input[type="date"], input[type="time"], select, textarea {
   border: 1.5px solid var(--line);
   border-radius: 10px;
   padding: 7px 10px;
@@ -713,7 +713,31 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .m-card h2 small { font-size: 12px; font-weight: 700; color: var(--ink-sub); margin-left: 4px; }
 .m-card h2 { display: flex; align-items: center; gap: 4px; }
 .m-ev-add { margin-left: auto; border: 1.5px solid var(--peach-mid); background: var(--peach-bg); color: var(--peach-ink); border-radius: var(--pill); padding: 5px 12px; font-size: 13px; font-weight: 900; }
-.m-ev-del { border: none; background: none; color: var(--ink-sub); font-size: 13px; padding: 2px 6px; }
+/* 핸드폰 일정 넣기: 아래에서 올라오는 시트 + 눌러서 고르는 칩 */
+.modal.me-sheet { max-width: 480px; }
+.me-form input { width: 100%; font-size: 16px; }
+.me-form .me-title { font-size: 17px; font-weight: 800; padding: 13px 14px; border-radius: 14px; }
+.me-label { margin: 16px 0 7px; font-size: 13.5px; font-weight: 900; color: var(--ink); }
+.me-label small { font-weight: 600; color: var(--ink-sub); }
+.me-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.me-chip { border: 1.5px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: var(--pill); padding: 8px 14px; font-size: 14px; font-weight: 800; }
+.me-chip[aria-pressed="true"] { background: var(--peach-bg); border-color: var(--peach-mid); color: var(--peach-ink); }
+.me-pick { margin-top: 7px; }
+.me-help { margin-top: 14px; font-size: 12.5px; color: var(--ink-sub); }
+.me-sheet .modal-foot .m-big { margin-top: 0; }
+.m-mode .modal-back:has(.me-sheet) { align-items: flex-end; padding: 0; }
+.m-mode .modal.me-sheet { border-radius: 22px 22px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* 핸드폰 첫 화면: 큰 버튼 세 개 + 접는 시간표 */
+.m-actions.three { grid-template-columns: repeat(3, 1fr); }
+.m-action.ev { background: var(--mint-bg); border-color: #b5e3c8; color: var(--mint-ink); }
+.m-action .m-badge { font-style: normal; vertical-align: 2px; display: inline-block; margin-left: 4px; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--mint-ink); color: #fff; font-size: 12px; line-height: 20px; }
+.m-tt summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 15.5px; font-weight: 900; }
+.m-tt summary::-webkit-details-marker { display: none; }
+.m-tt summary::after { content: '▾'; margin-left: auto; color: var(--ink-sub); transition: transform 0.15s; }
+.m-tt:not([open]) summary::after { transform: rotate(-90deg); }
+.m-tt[open] summary { margin-bottom: 8px; }
+.m-ev-bigadd { width: 100%; margin-bottom: 12px; }
+.m-ev-del {border: none; background: none; color: var(--ink-sub); font-size: 13px; padding: 2px 6px; }
 .m-empty { font-size: 13px; color: var(--ink-sub); padding: 4px 0; }
 .m-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .m-ev { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }

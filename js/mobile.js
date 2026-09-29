@@ -15,7 +15,7 @@ DN.Mobile = (function () {
   let rootEl = null;
   let installPrompt = null;   // 안드로이드 크롬의 설치 이벤트
   const st = {
-    view: 'home',             // home | obs | att
+    view: 'home',             // home | obs | att | ev
     date: today(),
     selected: new Set(),
     memo: '', memoOpen: false,
@@ -127,11 +127,12 @@ DN.Mobile = (function () {
     const body = root.querySelector('#mBody');
     if (st.view === 'obs') renderObs(body);
     else if (st.view === 'att') renderAtt(body);
+    else if (st.view === 'ev') renderEv(body);
     else renderHome(body);
 
     root.querySelector('#mDate').addEventListener('change', function (e) {
       st.date = e.target.value || today();
-      if (st.view === 'home') render(root);
+      if (st.view === 'home' || st.view === 'ev') render(root);
     });
     root.querySelector('#mMenu').addEventListener('click', openMenu);
     bindSendBar(root);
@@ -259,9 +260,34 @@ DN.Mobile = (function () {
       (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span>' +
       (e.source === 'mobile' ? '<button class="m-ev-del" data-evdel="' + esc(e.id) + '" aria-label="일정 지우기">✕</button>' : '') + '</li>';
   }
+  // 첫 화면: 큰 버튼 세 개(관찰 기록·출결·일정) + 접었다 펴는 오늘 시간표
   function renderHome(body) {
     const d = st.date;
-    const list = myGradeEvents();
+    const n = E.onDate(myGradeEvents(), d).filter(function (e) { return !(e.done && E.isTask(e)); }).length;
+    const tt = DN.Weekly.forDate(d);
+    const ttOpen = DN.Store.getMeta('mTtOpen') !== '0';
+    body.innerHTML = homeInstallCard() +
+      '<div class="m-actions three">' +
+        '<button class="m-action obs" id="mGoObs"><span>📝</span>관찰 기록</button>' +
+        '<button class="m-action att" id="mGoAtt"><span>🗓️</span>출결</button>' +
+        '<button class="m-action ev" id="mGoEv"><span>📌</span><b>일정' + (n ? '<i class="m-badge">' + n + '</i>' : '') + '</b></button></div>' +
+      (tt ? '<details class="m-card m-tt" id="mTt"' + (ttOpen ? ' open' : '') + '><summary>🕘 ' + (d === today() ? '오늘' : mdw(d)) + ' 시간표</summary>' +
+        DN.Weekly.dayListHtml(tt) + '</details>' : '');
+    bindInstall(body);
+    body.querySelector('#mGoObs').addEventListener('click', function () { go('obs'); });
+    body.querySelector('#mGoAtt').addEventListener('click', function () { go('att'); });
+    body.querySelector('#mGoEv').addEventListener('click', function () { go('ev'); });
+    const ttBox = body.querySelector('#mTt');
+    if (ttBox) ttBox.addEventListener('toggle', function () { DN.Store.setMeta('mTtOpen', ttBox.open ? '1' : '0'); });
+  }
+
+  // 일정 화면: [＋ 일정 넣기] + 그날 일정 + 이번 주 우리 학년 일정
+  // 완료 체크한 일정은 숨긴다. 아래 [완료한 일정 n개 보기]로 다시 볼 수 있다
+  function renderEv(body) {
+    const d = st.date;
+    const all = myGradeEvents();
+    const doneCount = all.filter(function (e) { return e.done && E.isTask(e); }).length;
+    const list = st.showDone ? all : all.filter(function (e) { return !(e.done && E.isTask(e)); });
     const todays = E.onDate(list, d);
     const w = E.weekRange(d);
     const days = [];
@@ -270,24 +296,19 @@ DN.Mobile = (function () {
       if (on.length) days.push({ d: x, list: on });
     }
     const grade = DN.Settings.get().grade;
-    body.innerHTML = homeInstallCard() +
-      '<section class="m-card"><h2>' + (d === today() ? '오늘' : mdw(d)) + ' <small>' + (d === today() ? mdw(d) : '') + '</small>' +
-        '<button class="m-ev-add" id="mEvAdd">＋ 일정</button></h2>' +
+    body.innerHTML = '<button class="btn-primary m-big m-ev-bigadd" id="mEvAdd">＋ 일정 넣기</button>' +
+      '<section class="m-card"><h2>' + (d === today() ? '오늘' : mdw(d)) + ' <small>' + (d === today() ? mdw(d) : '') + '</small></h2>' +
         (todays.length ? '<ul class="m-list">' + todays.map(evLine).join('') + '</ul>' : '<p class="m-empty">일정이 없어요.</p>') + '</section>' +
-      (DN.Weekly.forDate(d) ? '<section class="m-card"><h2>🕘 ' + (d === today() ? '오늘' : mdw(d)) + ' 시간표</h2>' + DN.Weekly.dayListHtml(DN.Weekly.forDate(d)) + '</section>' : '') +
-      '<div class="m-actions">' +
-        '<button class="m-action obs" id="mGoObs"><span>📝</span>관찰 기록</button>' +
-        '<button class="m-action att" id="mGoAtt"><span>🗓️</span>출결</button></div>' +
       '<section class="m-card"><h2>이번 주 ' + grade + '학년 일정 <small>' + md(w.start) + '~' + md(w.end) + '</small></h2>' +
         (days.length ? days.map(function (x) {
           const hol = x.list.some(function (e) { return e.kind === 'holiday'; });
           return '<div class="m-day"><div class="m-day-d' + (hol ? ' hol' : '') + (x.d === today() ? ' today' : '') + '">' + esc(mdw(x.d)) + '</div>' +
             '<ul class="m-list">' + x.list.map(evLine).join('') + '</ul></div>';
-        }).join('') : '<p class="m-empty">이번 주 일정이 없어요. PC에서 [일정 보내기]로 받을 수 있어요.</p>') + '</section>';
-    bindInstall(body);
+        }).join('') : '<p class="m-empty">이번 주 일정이 없어요.</p>') + '</section>' +
+      (doneCount ? '<button class="m-link" id="mShowDone">' + (st.showDone ? '완료한 일정 숨기기' : '완료한 일정 ' + doneCount + '개 보기') + '</button>' : '');
     body.querySelector('#mEvAdd').addEventListener('click', openEventAdd);
-    body.querySelector('#mGoObs').addEventListener('click', function () { go('obs'); });
-    body.querySelector('#mGoAtt').addEventListener('click', function () { go('att'); });
+    const sd = body.querySelector('#mShowDone');
+    if (sd) sd.addEventListener('click', function () { st.showDone = !st.showDone; render(rootEl); });
     body.addEventListener('click', function (e) {
       const del = e.target.closest('[data-evdel]');
       if (del) {
@@ -304,29 +325,56 @@ DN.Mobile = (function () {
       const ev = E.get(b.dataset.done);
       if (!ev) return;
       E.update(ev.id, { done: !ev.done });
-      toast(ev.done ? '완료 표시를 풀었어요.' : '완료!', 'success');
+      toast(ev.done ? '완료 표시를 풀었어요.' : '완료! 목록에서 숨겼어요.', 'success');
       render(rootEl);
       if (DN.Cloud) DN.Cloud.soon();
     });
   }
 
   // ── 핸드폰에서 일정 넣기 (갑자기 잡힌 회의 등) → 동기화로 PC에도 ──
+  // 날짜·시간은 자주 쓰는 것을 눌러서 고르고, 그 밖은 달력·시계로
+  const EV_TIMES = [['', '시간 없음'], ['08:30', '아침 8:30'], ['12:40', '점심 12:40'], ['15:00', '3시'], ['16:00', '4시']];
   function openEventAdd() {
-    const body = '<div class="fgrid">' +
-      '<label for="meDate">날짜</label><input type="date" id="meDate" value="' + esc(st.date) + '">' +
-      '<label for="meTitle">일정</label><input type="text" id="meTitle" maxlength="60" placeholder="예: 학년 협의회">' +
-      '<label for="meTime">시간</label><input type="time" id="meTime">' +
-      '<label for="mePlace">장소</label><input type="text" id="mePlace" maxlength="30" placeholder="(선택)">' +
-      '</div><p class="set-help">PC와 구글로 연결돼 있으면 PC 학교 일정에도 들어가요.</p>';
-    const m = openModal('일정 넣기', body, '<span class="pv-spacer"></span><button class="btn-cancel" data-close>닫기</button><button class="btn-primary" id="meSave">저장</button>');
-    const title = m.querySelector('#meTitle');
+    const day0 = today();
+    const days = [[day0, '오늘'], [E.addDays(day0, 1), '내일'], [E.addDays(day0, 2), '모레']];
+    const chips = function (name, list, cur) {
+      return '<div class="me-chips" data-chips="' + name + '">' + list.map(function (x) {
+        return '<button type="button" class="me-chip" data-v="' + esc(x[0]) + '" aria-pressed="' + (x[0] === cur) + '">' + esc(x[1]) + '</button>';
+      }).join('') + '</div>';
+    };
+    const body = '<div class="me-form">' +
+      '<input type="text" id="meTitle" class="me-title" maxlength="60" placeholder="무슨 일정이에요? (예: 학년 협의회)">' +
+      '<div class="me-label">📅 날짜</div>' + chips('date', days, st.date) +
+      '<input type="date" id="meDate" class="me-pick" value="' + esc(st.date) + '">' +
+      '<div class="me-label">🕘 시간</div>' + chips('time', EV_TIMES, '') +
+      '<input type="time" id="meTime" class="me-pick">' +
+      '<div class="me-label">📍 장소 <small>(선택)</small></div>' +
+      '<input type="text" id="mePlace" maxlength="30" placeholder="예: 4학년 연구실">' +
+      '<p class="me-help">☁️ 구글로 연결돼 있으면 PC 학교 일정에도 들어가요.</p></div>';
+    const m = openModal('일정 넣기', body, '<button class="btn-primary m-big" id="meSave">저장</button>');
+    m.querySelector('.modal').classList.add('me-sheet');
+    const title = m.querySelector('#meTitle'), dateIn = m.querySelector('#meDate'), timeIn = m.querySelector('#meTime');
     title.focus();
+    // 칩을 누르면 아래 달력·시계 값도 같이 바뀌고, 달력·시계를 바꾸면 맞는 칩이 켜진다
+    const sync = function (name, v) {
+      m.querySelectorAll('[data-chips="' + name + '"] .me-chip').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === v)); });
+    };
+    m.querySelectorAll('[data-chips]').forEach(function (box) {
+      box.addEventListener('click', function (e) {
+        const b = e.target.closest('.me-chip');
+        if (!b) return;
+        (box.dataset.chips === 'date' ? dateIn : timeIn).value = b.dataset.v;
+        sync(box.dataset.chips, b.dataset.v);
+      });
+    });
+    dateIn.addEventListener('change', function () { sync('date', dateIn.value); });
+    timeIn.addEventListener('change', function () { sync('time', timeIn.value); });
     m.querySelector('#meSave').addEventListener('click', function () {
-      const date = m.querySelector('#meDate').value;
+      const date = dateIn.value;
       const t = title.value.trim();
       if (!E.isDate(date)) { toast('날짜를 골라 주세요.', 'info'); return; }
-      if (!t) { toast('일정 이름을 써 주세요.', 'info'); title.focus(); return; }
-      const saved = E.create({ date: date, title: t, time: m.querySelector('#meTime').value, place: m.querySelector('#mePlace').value.trim(), isMine: true, source: 'mobile' });
+      if (!t) { toast('무슨 일정인지 써 주세요.', 'info'); title.focus(); return; }
+      const saved = E.create({ date: date, title: t, time: timeIn.value, place: m.querySelector('#mePlace').value.trim(), isMine: true, source: 'mobile' });
       if (!saved) { toast('저장하지 못했어요.', 'error'); return; }
       closeModal();
       toast((+date.slice(5, 7)) + '/' + (+date.slice(8)) + ' ' + t + ' 일정을 넣었어요.', 'success');
