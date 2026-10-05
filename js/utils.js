@@ -92,5 +92,8 @@ DN.utils = (function () {
     return back;
   }
 
-  return { esc, toast, uid, confirmAsk, copyText, today, openModal, closeModal };
+  // 의견 보내기 주소 — 구글 설문지를 만들면 이 한 줄만 바꾼다
+  const FEEDBACK_URL = 'https://forms.gle/6eDsBzREYK51pHHYA';
+
+  return { esc, toast, uid, confirmAsk, copyText, today, openModal, closeModal, FEEDBACK_URL };
 })();

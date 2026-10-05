@@ -1073,3 +1073,17 @@ html[data-look] .preset-group:nth-child(2) .preset-btn, html[data-look] .m-prese
 .look-opt small { display: block; font-weight: 600; color: var(--ink-sub); font-size: 11.5px; margin-top: 2px; }
 .look-sw { display: flex; height: 38px; border-radius: 8px; overflow: hidden; margin-bottom: 8px; border: 1px solid rgba(0, 0, 0, 0.06); }
 .look-sw span { flex: 1; }
+
+/* 백업: 기록 보호 상태 */
+.bk-guard { margin-top: 14px; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+.bk-guard.on { background: var(--mint-bg); color: var(--mint-ink); }
+.bk-guard.off { background: var(--lemon-bg); color: var(--lemon-ink); }
+.bk-guard .btn-ghost { margin-left: 6px; padding: 3px 10px; font-size: 12.5px; }
+.bk-newyear { margin-top: 14px; border: 1.5px dashed var(--line-strong); border-radius: 14px; padding: 10px 14px; }
+.bk-newyear summary { cursor: pointer; font-weight: 900; font-size: 14.5px; }
+.bk-newyear summary small { font-weight: 600; color: var(--ink-sub); margin-left: 4px; }
+.ny-parts { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0; }
+.ny-grid { margin: 8px 0 12px; }
+.m-top-links { display: flex; gap: 8px; margin-bottom: 12px; }
+.m-top-links .m-guide-top { flex: 1; margin-bottom: 0; }
+.m-top-links .m-guide-top.fb { background: var(--mint-bg); color: var(--mint-ink); border-color: #b5e3c8; }

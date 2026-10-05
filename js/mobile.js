@@ -364,7 +364,7 @@ DN.Mobile = (function () {
         E.remove(ev0.id);
         toast('일정을 지웠어요.', 'info');
         render(rootEl);
-        if (DN.Cloud) DN.Cloud.soon();
+        if (DN.Cloud) DN.Cloud.soon(true);
         return;
       }
       const b = e.target.closest('[data-done]');
@@ -374,7 +374,7 @@ DN.Mobile = (function () {
       E.update(ev.id, { done: !ev.done });
       toast(ev.done ? '완료 표시를 풀었어요.' : '완료! 목록에서 숨겼어요.', 'success');
       render(rootEl);
-      if (DN.Cloud) DN.Cloud.soon();
+      if (DN.Cloud) DN.Cloud.soon(true);
     });
   }
 
@@ -426,7 +426,7 @@ DN.Mobile = (function () {
       closeModal();
       toast((+date.slice(5, 7)) + '/' + (+date.slice(8)) + ' ' + t + ' 일정을 넣었어요.', 'success');
       render(rootEl);
-      if (DN.Cloud) DN.Cloud.soon();
+      if (DN.Cloud) DN.Cloud.soon(true);
     });
   }
 
@@ -461,7 +461,7 @@ DN.Mobile = (function () {
     st.memo = ''; st.memoOpen = false;
     st.undo = { col: col, ids: saved.map(function (r) { return r.id; }), text: text };
     render(rootEl);
-    if (DN.Cloud) DN.Cloud.soon();
+    if (DN.Cloud) DN.Cloud.soon(true);
   }
 
   // ── 관찰 기록 ──
@@ -553,7 +553,7 @@ DN.Mobile = (function () {
       st.undo = null;
       toast('방금 기록을 되돌렸어요.', 'info');
       render(rootEl);
-      if (DN.Cloud) DN.Cloud.soon();
+      if (DN.Cloud) DN.Cloud.soon(true);
     });
     clearTimeout(undoTimer);
     undoTimer = setTimeout(function () { st.undo = null; box.hidden = true; }, 6000);
@@ -562,7 +562,8 @@ DN.Mobile = (function () {
   // ── 설정 메뉴 ──
   function openMenu() {
     const s = DN.Settings.get();
-    const body = '<a class="m-guide-top" href="guide.html" target="_blank" rel="noopener">📖 사용 설명서 보기</a>' +
+    const body = '<div class="m-top-links"><a class="m-guide-top" href="guide.html" target="_blank" rel="noopener">📖 사용 설명서</a>' +
+      '<a class="m-guide-top fb" href="' + DN.utils.FEEDBACK_URL + '" target="_blank" rel="noopener">💬 의견 보내기</a></div>' +
       '<div class="fgrid">' +
       '<label for="mnCount">학생 수</label><input type="number" id="mnCount" min="1" max="60" inputmode="numeric" value="' + esc(s.studentCount) + '">' +
       '<label for="mnGrade">학년</label><select id="mnGrade">' + [1, 2, 3, 4, 5, 6].map(function (g) {

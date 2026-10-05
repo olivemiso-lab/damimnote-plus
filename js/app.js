@@ -110,6 +110,8 @@ DN.App = (function () {
 
   function init() {
     DN.Settings.ensure();
+    const fb = document.getElementById('fbLink');
+    if (fb) fb.href = DN.utils.FEEDBACK_URL;
     DN.Settings.applyLook(DN.Settings.look());
     const nav = document.getElementById('nav');
     nav.innerHTML = TABS.map(function (t) {
@@ -130,6 +132,8 @@ DN.App = (function () {
     relayout();
     if (DN.Cloud) DN.Cloud.start();
     registerSW();
+    // 기록 보호: 저장 공간이 모자라도 브라우저가 이 앱의 기록을 저절로 지우지 않게 요청
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(function (ok) { if (!ok) navigator.storage.persist(); }); } catch (e) {}
   }
 
   document.addEventListener('DOMContentLoaded', init);

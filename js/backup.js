@@ -386,7 +386,9 @@ DN.Backup = (function () {
           </div>\
           <button class="btn-ghost" id="bkCsv">CSV 내보내기</button>\
         </div>\
-        <p class="bk-note">⚠️ 데이터는 이 브라우저에만 저장됩니다. 캐시 삭제·PC 교체 시 사라지니 주기적으로 기록 백업을 받아 두세요.<br><span id="bkUsage"></span></p>\
+        <p class="bk-guard" id="bkGuard"></p>\
+        <details class="bk-newyear" id="bkNewYear"><summary>🌱 새 학년 시작하기 <small>3월에 새 반을 맡을 때</small></summary><div id="bkNyBody"></div></details>\
+        <p class="bk-note">⚠️ 학생 이름이 들어간 전체 기록은 <b>이 PC의 브라우저에만</b> 있어요. 브라우저 기록·사이트 데이터 삭제, PC 교체 때 사라지니 한 달에 한 번은 기록 백업을 받아 두세요.<br><span id="bkUsage"></span></p>\
       </div>';
 
     container.querySelector('#bkCsv').addEventListener('click', exportCsv);
@@ -397,10 +399,96 @@ DN.Backup = (function () {
       e.target.value = '';
     });
     refreshInfo();
+    renderGuard();
+    renderNewYear();
+  }
+
+  // ── 새 학년 시작하기 ──
+  // 고른 것만 비운다. 핸드폰과 오가는 기록(관찰·출결·일정·시간표)은 “지움 표시”로 남겨 핸드폰이 옛 기록을 다시 보내도 되살아나지 않게 한다
+  const NY_PARTS = [
+    { id: 'students', label: '학생 명단', cols: ['students'], tomb: false },
+    { id: 'records', label: '관찰·출결 기록', cols: ['observations', 'attendance'], tomb: true },
+    { id: 'seating', label: '자리·모둠 배치와 관계', cols: ['seatings', 'relations'], tomb: false },
+    { id: 'schedule', label: '학교 일정·시간표', cols: ['events', 'timetables'], tomb: true },
+  ];
+  function startNewYear(parts, settings) {
+    const counts = {};
+    NY_PARTS.forEach(function (p) {
+      if (parts.indexOf(p.id) < 0) return;
+      p.cols.forEach(function (col) {
+        const live = DN.Store.getAll(col).filter(function (r) { return !r.deleted; });
+        counts[col] = live.length;
+        if (!live.length) return;
+        if (p.tomb) DN.Store.batch(col, { update: live.map(function (r) { return { id: r.id, patch: { deleted: true } }; }) });
+        else DN.Store.replaceAll(col, []);
+      });
+    });
+    if (settings) DN.Settings.save(settings);
+    DN.Store.setMeta('newYearAt', new Date().toISOString());
+    return counts;
+  }
+  function renderNewYear() {
+    const body = rootEl && rootEl.querySelector('#bkNyBody');
+    if (!body) return;
+    const s = DN.Settings.get();
+    const next = Math.max(s.schoolYear + 1, DN.Settings.defaultSchoolYear());
+    body.innerHTML =
+      '<p class="set-help">올해 기록을 <b>백업 파일로 먼저 받은 뒤</b>, 고른 것만 비우고 새 반 정보로 시작해요. 상황 버튼·화면 스타일·구글 연결은 그대로예요.</p>' +
+      '<div class="ny-parts">' + NY_PARTS.map(function (p) {
+        return '<label class="check-label"><input type="checkbox" data-part="' + p.id + '" checked> ' + p.label + ' 비우기</label>';
+      }).join('') + '</div>' +
+      '<div class="set-grid ny-grid">' +
+        '<label for="nyYear">새 학년도</label><input type="number" id="nyYear" min="2000" max="2100" value="' + next + '">' +
+        '<label for="nyGrade">학년</label><select id="nyGrade">' + [1, 2, 3, 4, 5, 6].map(function (g) { return '<option value="' + g + '"' + (g === s.grade ? ' selected' : '') + '>' + g + '학년</option>'; }).join('') + '</select>' +
+        '<label for="nyClass">반</label><input type="number" id="nyClass" min="1" max="30" value="' + s.classNo + '">' +
+        '<label for="nyCount">학생 수</label><input type="number" id="nyCount" min="1" max="60" value="' + s.studentCount + '">' +
+      '</div>' +
+      '<button class="btn-primary" id="nyGo">백업 받고 새 학년 시작</button>' +
+      '<p class="set-help">핸드폰은 구글로 연결돼 있으면 다음 동기화 때 일정·시간표가 함께 정리돼요. 핸드폰에 남은 옛 관찰·출결은 ⚙️ → [PC로 보낸 기록 정리]로 지우면 돼요.</p>';
+    body.querySelector('#nyGo').addEventListener('click', function () {
+      const parts = Array.prototype.map.call(body.querySelectorAll('[data-part]:checked'), function (x) { return x.dataset.part; });
+      const year = parseInt(body.querySelector('#nyYear').value, 10);
+      const settings = {
+        schoolYear: year >= 2000 && year <= 2100 ? year : next,
+        grade: +body.querySelector('#nyGrade').value,
+        classNo: Math.min(30, Math.max(1, parseInt(body.querySelector('#nyClass').value, 10) || 1)),
+        studentCount: Math.min(60, Math.max(1, parseInt(body.querySelector('#nyCount').value, 10) || s.studentCount)),
+      };
+      const names = NY_PARTS.filter(function (p) { return parts.indexOf(p.id) >= 0; }).map(function (p) { return p.label; });
+      if (!DN.utils.confirmAsk(['새 학년(' + settings.schoolYear + '학년도 ' + settings.grade + '학년 ' + settings.classNo + '반)을 시작할까요?', '',
+        '먼저 지금 기록 전체를 백업 파일로 받아요.', names.length ? '그다음 비울 것: ' + names.join(', ') : '비울 것은 없고, 학년·반 정보만 바꿔요.'].join(String.fromCharCode(10)))) return;
+      exportJson();   // 지우기 전에 반드시 백업 파일부터
+      const counts = startNewYear(parts, settings);
+      const n = Object.keys(counts).reduce(function (a, k) { return a + counts[k]; }, 0);
+      toast('새 학년을 시작했어요! 백업 파일을 받았고, ' + n + '건을 정리했어요.', 'success');
+      if (DN.Cloud && DN.Cloud.linked()) DN.Cloud.sync(false);
+      DN.App.relayout();
+    });
+  }
+
+  // 브라우저에 “이 사이트 기록은 함부로 지우지 말아 달라”고 요청한 결과
+  function renderGuard() {
+    const el = rootEl && rootEl.querySelector('#bkGuard');
+    if (!el) return;
+    if (!(navigator.storage && navigator.storage.persisted)) { el.hidden = true; return; }
+    navigator.storage.persisted().then(function (ok) {
+      el.className = 'bk-guard ' + (ok ? 'on' : 'off');
+      el.innerHTML = ok
+        ? '🛡️ <b>기록 보호 켜짐</b> — 저장 공간이 부족해도 브라우저가 이 앱의 기록을 저절로 지우지 않아요. (직접 삭제하면 지워지니 백업은 계속 받아 두세요)'
+        : '🛡️ <b>기록 보호 꺼짐</b> — 저장 공간이 부족하면 브라우저가 기록을 지울 수 있어요. <button class="btn-ghost" id="bkPersist">보호 켜기</button>' +
+          '<br><small>안 켜지면 크롬 주소창 오른쪽의 설치 버튼으로 앱을 설치하거나, 즐겨찾기에 추가해 보세요.</small>';
+      const b = el.querySelector('#bkPersist');
+      if (b) b.addEventListener('click', function () {
+        navigator.storage.persist().then(function (granted) {
+          toast(granted ? '기록 보호를 켰어요.' : '브라우저가 아직 허락하지 않았어요. 앱을 설치하면 켜질 수 있어요.', granted ? 'success' : 'info');
+          renderGuard();
+        });
+      });
+    }, function () { el.hidden = true; });
   }
 
   return {
-    render, buildBackup, parseBackup, restore, summarize, markBackup, isDue, dueText, snoozeReminder, exportJson, csvCell, download,
+    render, buildBackup, parseBackup, restore, summarize, markBackup, isDue, dueText, snoozeReminder, exportJson, csvCell, download, startNewYear,
     buildZip, parseZip, restoreWithFiles, importFile,
   };
 })();

@@ -279,9 +279,22 @@ DN.Cloud = (function () {
       .filter(Boolean).join(' · ');
   }
 
-  // 핸드폰: 기록을 저장한 뒤 몇 초 기다렸다가 자동으로 올린다(연결돼 있고 로그인이 살아 있을 때)
-  function soon() {
-    if (!linked() || !tokenValid()) { notify(); return; }
+  // 핸드폰: 기록을 저장한 뒤 몇 초 기다렸다가 자동으로 올린다
+  // fromTap: 교사가 버튼을 누른 그 순간이면, 로그인이 끊겼어도 그 자리에서 이어 붙인다(구글 창이 잠깐 떴다 닫힘)
+  // 교사가 취소했거나 실패하면 10분 동안은 다시 묻지 않는다
+  let reauthBlockedUntil = 0;
+  let tokenRequester = function (i) { return requestToken(i); };   // 테스트에서 바꿔 끼운다
+  function soon(fromTap) {
+    if (!linked()) { notify(); return; }
+    if (!tokenValid()) {
+      if (!fromTap || Date.now() < reauthBlockedUntil || busy) { notify(); return; }
+      reauthBlockedUntil = Date.now() + 10 * 60 * 1000;
+      tokenRequester(false).then(function () {
+        reauthBlockedUntil = 0;
+        sync(false);
+      }, function () { notify(); });
+      return;
+    }
     clearTimeout(soonTimer);
     soonTimer = setTimeout(function () { sync(false); }, 3000);
   }
@@ -333,6 +346,7 @@ DN.Cloud = (function () {
     // 테스트용
     _setTransport: function (t) { transport = t || driveTransport; },
     _setToken: function (t) { saveToken(t); },
+    _setTokenRequester: function (f) { tokenRequester = f || function (i) { return requestToken(i); }; reauthBlockedUntil = 0; },
     isBusy: function () { return busy; },
     renderBar: renderBar,
   };
