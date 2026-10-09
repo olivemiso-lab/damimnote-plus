@@ -12,7 +12,7 @@ DN.Attend = (function () {
   const MEMO_HINT = '병명 등 구체적인 사유는 적지 마세요. 분류(질병·미인정 등)만으로 충분해요.';
 
   let rootEl = null;
-  const state = { date: today(), selected: new Set(), type: '', reason: '', memo: '', month: today().slice(0, 7) };
+  const state = { date: today(), selected: new Set(), type: '', period: '', reason: '', memo: '', month: today().slice(0, 7) };
 
   function md(d) { return (+d.slice(5, 7)) + '/' + (+d.slice(8)); }
   function segHtml(id, list, cur) {
@@ -35,6 +35,8 @@ DN.Attend = (function () {
         <div id="atPicker"></div>\
         <div class="at-choose">\
           <div class="at-line"><span class="at-lbl">유형</span>' + segHtml('atType', R.TYPES, state.type) + '</div>\
+          <div class="at-line" id="atPeriodLine"' + (R.PERIOD_TYPES.indexOf(state.type) < 0 ? ' hidden' : '') + '><span class="at-lbl">교시</span>' +
+            segHtml('atPeriod', R.PERIODS.map(String), state.period).replace(/(data-v="(\d)"[^>]*>)\d</g, '$1$2교시<') + '</div>\
           <div class="at-line"><span class="at-lbl">사유</span>' + segHtml('atReason', R.REASONS, state.reason) + '</div>\
           <div class="at-line"><span class="at-lbl">메모</span><input type="text" id="atMemo" maxlength="40" placeholder="예: 보호자 연락함, 서류 받음" value="' + esc(state.memo) + '">\
             <span class="memo-hint">⚠ ' + MEMO_HINT + '</span></div>\
@@ -48,7 +50,7 @@ DN.Attend = (function () {
           <button class="btn-ghost sc-nav" id="atNext" aria-label="다음 달">▶</button>\
           <span class="pv-spacer"></span>\
           <span class="at-legend">' + R.REASONS.map(function (r) { return '<span class="at-mark ' + REASON_CLS[r] + '">' + esc(r) + '</span>'; }).join('') +
-          '<span class="at-legend-t">결=결석 · 지=지각 · 조=조퇴 · 과=결과</span></span>\
+          '<span class="at-legend-t">결=결석 · 지=지각 · 조=조퇴 · 과=결과 · 옆 숫자=교시</span></span>\
         </div>\
         <div class="pv-scroll" id="atTable"></div>\
         <p class="set-help">칸을 누르면 그 날·그 학생의 출결 메모를 고치거나 새로 넣을 수 있어요.</p>\
@@ -63,6 +65,7 @@ DN.Attend = (function () {
     pick.innerHTML = DN.Picker.html(state.selected);
     DN.Picker.bind(pick, state.selected);
     bindSeg('#atType', 'type');
+    bindSeg('#atPeriod', 'period');
     bindSeg('#atReason', 'reason');
     renderTable();
     renderSummary();
@@ -100,6 +103,7 @@ DN.Attend = (function () {
       if (!b) return;
       state[key] = state[key] === b.dataset.v ? '' : b.dataset.v;
       seg.querySelectorAll('[data-v]').forEach(function (x) { x.setAttribute('aria-pressed', String(x.dataset.v === state[key])); });
+      if (key === 'type') rootEl.querySelector('#atPeriodLine').hidden = R.PERIOD_TYPES.indexOf(state.type) < 0;
     });
   }
 
@@ -109,12 +113,14 @@ DN.Attend = (function () {
     if (!state.reason) { toast('사유(질병·미인정·출석인정·기타)를 골라 주세요.', 'info'); return; }
     if (!DN.Events.isDate(state.date)) { toast('날짜를 확인해 주세요.', 'error'); return; }
     const nos = Array.from(state.selected).sort(function (a, b) { return a - b; });
-    if (!R.saveAttendance(state.date, nos, state.type, state.reason, state.memo.trim())) {
+    const period = R.cleanPeriod(state.type, state.period);
+    if (!R.saveAttendance(state.date, nos, state.type, state.reason, state.memo.trim(), period)) {
       toast('저장하지 못했어요. 저장 공간을 확인해 주세요.', 'error');
       return;
     }
-    toast(DN.Picker.listText(nos) + ' · ' + md(state.date) + ' ' + state.reason + ' ' + state.type + ' 저장됨', 'success');
+    toast(DN.Picker.listText(nos) + ' · ' + md(state.date) + ' ' + (period ? period + '교시 ' : '') + state.reason + ' ' + state.type + ' 저장됨', 'success');
     state.selected.clear();
+    state.period = '';
     state.memo = '';
     state.month = state.date.slice(0, 7);
     render(rootEl);
@@ -151,7 +157,7 @@ DN.Attend = (function () {
         const list = cell[n + '|' + d] || [];
         return '<td class="' + (off(d) ? 'off' : '') + '"><button class="at-cell" data-no="' + n + '" data-date="' + d + '" aria-label="' + esc(n + '번 ' + md(d)) + '">' +
           list.map(function (a) {
-            return '<span class="at-mark ' + (REASON_CLS[a.reason] || 'r-etc') + '" title="' + esc(a.reason + ' ' + a.type + (a.memo ? ' — ' + a.memo : '')) + '">' + esc(R.TYPE_ABBR[a.type] || '?') + '</span>';
+            return '<span class="at-mark ' + (REASON_CLS[a.reason] || 'r-etc') + '" title="' + esc(a.reason + ' ' + R.typeText(a) + (a.memo ? ' — ' + a.memo : '')) + '">' + esc(R.TYPE_ABBR[a.type] || '?') + (a.period ? '<sub>' + a.period + '</sub>' : '') + '</span>';
           }).join('') + '</button></td>';
       }).join('') + '</tr>';
     }).join('');
@@ -169,6 +175,7 @@ DN.Attend = (function () {
     const rows = list.map(function (a) {
       return '<div class="at-edit" data-id="' + esc(a.id) + '">' +
         '<select data-f="type">' + R.TYPES.map(function (t) { return '<option' + (t === a.type ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>' +
+        periodSelect('data-f="period"', a.period) +
         '<select data-f="reason">' + R.REASONS.map(function (t) { return '<option' + (t === a.reason ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>' +
         '<input data-f="memo" maxlength="40" value="' + esc(a.memo || '') + '" placeholder="메모">' +
         '<button class="ic del" data-atdel="' + esc(a.id) + '" aria-label="삭제">✕</button></div>';
@@ -177,6 +184,7 @@ DN.Attend = (function () {
       (rows || '<p class="side-empty">이 날 기록이 없어요.</p>') +
       '<div class="section-label">새로 넣기</div>' +
       '<div class="at-edit new"><select id="nType">' + R.TYPES.map(function (t) { return '<option>' + t + '</option>'; }).join('') + '</select>' +
+      periodSelect('id="nPeriod"', null) +
       '<select id="nReason">' + R.REASONS.map(function (t) { return '<option>' + t + '</option>'; }).join('') + '</select>' +
       '<input id="nMemo" maxlength="40" placeholder="메모 (선택)"><button class="btn-primary" id="nAdd">넣기</button></div>' +
       '<p class="memo-hint">⚠ ' + MEMO_HINT + '</p>';
@@ -188,6 +196,9 @@ DN.Attend = (function () {
       if (!f || !row) return;
       const patch = {};
       patch[f] = f === 'memo' ? e.target.value.trim() : e.target.value;
+      // 교시는 지각·조퇴·결과일 때만 남긴다
+      const type = row.querySelector('[data-f="type"]').value;
+      patch.period = R.cleanPeriod(type, row.querySelector('[data-f="period"]').value);
       R.updateAttendance(row.dataset.id, patch);
       toast('고쳤어요.', 'success');
     });
@@ -200,7 +211,7 @@ DN.Attend = (function () {
         return;
       }
       if (e.target.closest('#nAdd')) {
-        R.saveAttendance(date, [no], m.querySelector('#nType').value, m.querySelector('#nReason').value, m.querySelector('#nMemo').value.trim());
+        R.saveAttendance(date, [no], m.querySelector('#nType').value, m.querySelector('#nReason').value, m.querySelector('#nMemo').value.trim(), m.querySelector('#nPeriod').value);
         closeModal();
         toast('저장했어요.', 'success');
         render(rootEl);
@@ -208,6 +219,13 @@ DN.Attend = (function () {
       }
       if (e.target.closest('[data-close]')) render(rootEl);
     });
+  }
+
+  // 교시 고르기 (결석이면 저장할 때 무시됨)
+  function periodSelect(attr, cur) {
+    return '<select ' + attr + ' aria-label="교시"><option value="">교시 —</option>' + R.PERIODS.map(function (p) {
+      return '<option value="' + p + '"' + (p === cur ? ' selected' : '') + '>' + p + '교시</option>';
+    }).join('') + '</select>';
   }
 
   // ── 월말 요약 ──

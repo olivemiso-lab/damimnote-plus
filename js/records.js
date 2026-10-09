@@ -12,6 +12,15 @@ DN.Records = (function () {
   const TYPES = ['결석', '지각', '조퇴', '결과'];
   const TYPE_ABBR = { '결석': '결', '지각': '지', '조퇴': '조', '결과': '과' };
   const REASONS = ['질병', '미인정', '출석인정', '기타'];
+  // 지각·조퇴·결과는 몇 교시인지 함께 적는다 (고르지 않아도 저장은 됨)
+  const PERIOD_TYPES = ['지각', '조퇴', '결과'];
+  const PERIODS = [1, 2, 3, 4, 5, 6];
+  function cleanPeriod(type, p) {
+    p = +p;
+    return PERIOD_TYPES.indexOf(type) >= 0 && p >= 1 && p <= 9 && p % 1 === 0 ? p : null;
+  }
+  // "3교시 조퇴" / "결석"
+  function typeText(a) { return (a.period ? a.period + '교시 ' : '') + a.type; }
   // 기본 관찰 상황 (명세 §5 — 관찰된 행동 중심 문구)
   const DEFAULT_PRESETS = [
     // 핸드폰에서 한눈에 보이도록 무리마다 잘한 행동·걱정되는 행동을 몇 개씩만. 나머지는 메모나 교사가 추가
@@ -230,8 +239,8 @@ DN.Records = (function () {
     const list = attendance(from, to).slice().sort(function (a, b) {
       return (a.studentNo - b.studentNo) || (a.date < b.date ? -1 : a.date > b.date ? 1 : TYPES.indexOf(a.type) - TYPES.indexOf(b.type));
     });
-    return [['번호', '이름', '날짜', '요일', '유형', '사유', '메모', '기록한 곳']].concat(list.map(function (r) {
-      return [r.studentNo, map[r.studentNo] || '', r.date, DN.Events.weekdayOf(r.date), r.type, r.reason, r.memo || '',
+    return [['번호', '이름', '날짜', '요일', '유형', '교시', '사유', '메모', '기록한 곳']].concat(list.map(function (r) {
+      return [r.studentNo, map[r.studentNo] || '', r.date, DN.Events.weekdayOf(r.date), r.type, r.period ? r.period + '교시' : '', r.reason, r.memo || '',
         r.device === 'mobile' ? '핸드폰' : 'PC'];
     }));
   }
@@ -242,13 +251,13 @@ DN.Records = (function () {
 
   // ── 출결 메모 ──
   // 같은 날·같은 학생·같은 유형이면 덮어쓰고, 없으면 새로 만든다. 결과: 저장된 건수
-  function saveAttendance(date, nos, type, reason, memo) {
+  function saveAttendance(date, nos, type, reason, memo, period) {
     const dev = device();
     const existing = DN.Store.query(ATT, function (r) { return alive(r) && r.date === date && r.type === type; });
     const add = [], update = [];
     nos.forEach(function (no) {
       const old = existing.find(function (r) { return r.studentNo === no; });
-      const fields = { reason: reason, memo: memo || '', device: dev };
+      const fields = { reason: reason, memo: memo || '', period: cleanPeriod(type, period), device: dev };
       if (old) update.push({ id: old.id, patch: fields });
       else add.push(Object.assign({ date: date, studentNo: no, type: type }, fields));
     });
@@ -315,7 +324,7 @@ DN.Records = (function () {
   }
 
   return {
-    TYPES, TYPE_ABBR, REASONS, DEFAULT_PRESETS,
+    TYPES, PERIOD_TYPES, PERIODS, cleanPeriod, typeText, TYPE_ABBR, REASONS, DEFAULT_PRESETS,
     studentNumbers, nameMap, label,
     presets, presetGroups, addPreset, updatePreset, removePreset, movePreset,
     addObservations, addFreeObservations, updateObservation, removeRecords, observations, countByStudent, countByLabel, copyText,

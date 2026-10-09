@@ -1087,3 +1087,7 @@ html[data-look] .preset-group:nth-child(2) .preset-btn, html[data-look] .m-prese
 .m-top-links { display: flex; gap: 8px; margin-bottom: 12px; }
 .m-top-links .m-guide-top { flex: 1; margin-bottom: 0; }
 .m-top-links .m-guide-top.fb { background: var(--mint-bg); color: var(--mint-ink); border-color: #b5e3c8; }
+.m-period { margin-top: 4px; }
+.m-period-t { font-size: 13px; font-weight: 800; color: var(--ink-sub); margin: 4px 0 6px; }
+.m-seg.six { grid-template-columns: repeat(3, 1fr); }
+.at-mark sub { font-size: 9px; font-weight: 800; margin-left: 1px; vertical-align: baseline; position: relative; top: 2px; }

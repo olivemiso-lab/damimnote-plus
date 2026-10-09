@@ -20,7 +20,7 @@ DN.Mobile = (function () {
     selected: new Set(),
     memo: '', memoOpen: false,
     free: '',                 // 직접 쓰기 글
-    type: '', reason: '',
+    type: '', reason: '', period: '',
     undo: null,               // { col, ids, text }
   };
   let undoTimer = null;
@@ -145,7 +145,7 @@ DN.Mobile = (function () {
     st.view = view;
     st.selected.clear();
     st.memo = ''; st.memoOpen = false;
-    st.type = ''; st.reason = '';
+    st.type = ''; st.reason = ''; st.period = '';
     render(rootEl);
     window.scrollTo(0, 0);
   }
@@ -512,7 +512,11 @@ DN.Mobile = (function () {
   }
   function renderAtt(body) {
     body.innerHTML = '<p class="notice small">📌 나이스 입력 전 확인용 메모이며, 공식 출결은 나이스에 입력하세요.</p>' + pickerSection() +
-      '<section class="m-card"><h2>② 유형</h2>' + segHtml('type', R.TYPES) + '</section>' +
+      '<section class="m-card"><h2>② 유형</h2>' + segHtml('type', R.TYPES) +
+      '<div class="m-period" id="mPeriod"' + (R.PERIOD_TYPES.indexOf(st.type) < 0 ? ' hidden' : '') + '><div class="m-period-t">몇 교시?</div>' +
+      '<div class="m-seg six" data-key="period">' + R.PERIODS.map(function (p) {
+        return '<button type="button" data-v="' + p + '" aria-pressed="' + (st.period === String(p)) + '">' + p + '교시</button>';
+      }).join('') + '</div></div></section>' +
       '<section class="m-card"><h2>③ 사유</h2>' + segHtml('reason', R.REASONS) +
       '<div class="m-memo">' + memoHtml('병명 등 구체적인 사유는 적지 마세요.') + '</div>' +
       '<button class="btn-primary m-big" id="mAttSave">저장</button></section>';
@@ -524,6 +528,7 @@ DN.Mobile = (function () {
         const key = seg.dataset.key;
         st[key] = st[key] === b.dataset.v ? '' : b.dataset.v;
         seg.querySelectorAll('[data-v]').forEach(function (x) { x.setAttribute('aria-pressed', String(x.dataset.v === st[key])); });
+        if (key === 'type') body.querySelector('#mPeriod').hidden = R.PERIOD_TYPES.indexOf(st.type) < 0;
       });
     });
     body.querySelector('#mAttSave').addEventListener('click', function () {
@@ -531,11 +536,12 @@ DN.Mobile = (function () {
       if (!st.type || !st.reason) { toast('유형과 사유를 골라 주세요.', 'info'); return; }
       const nos = Array.from(st.selected).sort(function (a, b) { return a - b; });
       const before = R.attendance(st.date, st.date).map(function (a) { return a.id; });
-      if (!R.saveAttendance(st.date, nos, st.type, st.reason, st.memoOpen ? st.memo.trim() : '')) { toast('저장하지 못했어요.', 'error'); return; }
+      const period = R.cleanPeriod(st.type, st.period);
+      if (!R.saveAttendance(st.date, nos, st.type, st.reason, st.memoOpen ? st.memo.trim() : '', period)) { toast('저장하지 못했어요.', 'error'); return; }
       // 되돌리기는 새로 생긴 기록만 지운다(같은 유형을 덮어쓴 경우는 되돌리지 않음)
       const added = R.attendance(st.date, st.date).filter(function (a) { return before.indexOf(a.id) < 0; });
-      const text = DN.Picker.listText(nos) + ' · ' + st.reason + ' ' + st.type + ' 저장됨';
-      st.type = ''; st.reason = '';
+      const text = DN.Picker.listText(nos) + ' · ' + (period ? period + '교시 ' : '') + st.reason + ' ' + st.type + ' 저장됨';
+      st.type = ''; st.reason = ''; st.period = '';
       afterSave(R.ATT, added, text);
     });
   }

@@ -50,7 +50,10 @@ DN.Sync = (function () {
   function cleanAttendance(r) {
     if (!baseOk(r) || !DN.Events.isDate(r.date) || !(r.studentNo >= 1 && r.studentNo <= 99 && r.studentNo % 1 === 0)) return null;
     if (R.TYPES.indexOf(r.type) < 0 || R.REASONS.indexOf(r.reason) < 0) return null;
-    return Object.assign(base(r), { date: r.date, studentNo: r.studentNo, type: r.type, reason: r.reason, memo: str(r.memo, 100), device: 'mobile' });
+    const o = Object.assign(base(r), { date: r.date, studentNo: r.studentNo, type: r.type, reason: r.reason, memo: str(r.memo, 100), device: 'mobile' });
+    const p = R.cleanPeriod(r.type, r.period);
+    if (p) o.period = p;
+    return o;
   }
   function cleanPreset(r) {
     if (!baseOk(r) || !str(r.label, 60)) return null;
