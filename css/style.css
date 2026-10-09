@@ -583,7 +583,7 @@ button.sc-date { border: none; background: none; text-align: left; font: inherit
 .quick-memo { margin: 10px 0 4px; }
 .preset-groups { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .preset-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.preset-gname { width: 44px; flex-shrink: 0; font-size: 12px; font-weight: 900; color: var(--ink-sub); }
+.preset-gname { width: 58px; flex-shrink: 0; font-size: 12px; font-weight: 900; color: var(--ink-sub); }
 .preset-btn {
   border: 1.5px solid var(--peach-mid); background: var(--peach-bg); color: var(--peach-ink);
   border-radius: var(--pill); padding: 8px 15px; font-size: 13px; font-weight: 800;
@@ -938,7 +938,7 @@ html[data-look="navy"] .m-brand .plus { color: #ffc933; }
 .free-row input { flex: 1; min-width: 0; }
 .m-free textarea { width: 100%; font-size: 16px; }
 .preset-tip { font-size: 11.5px; color: var(--ink-sub); margin: 2px 0 4px; }
-.preset-group .preset-tip { flex-basis: 100%; margin: 0 0 4px 50px; }
+.preset-group .preset-tip { flex-basis: 100%; margin: 0 0 4px 64px; }
 .rel-empty { font-size: 12px; color: var(--ink-sub); }
 
 .board-wrap { overflow-x: auto; }
@@ -1091,3 +1091,50 @@ html[data-look] .preset-group:nth-child(2) .preset-btn, html[data-look] .m-prese
 .m-period-t { font-size: 13px; font-weight: 800; color: var(--ink-sub); margin: 4px 0 6px; }
 .m-seg.six { grid-template-columns: repeat(3, 1fr); }
 .at-mark sub { font-size: 9px; font-weight: 800; margin-left: 1px; vertical-align: baseline; position: relative; top: 2px; }
+
+/* ── 교과 수업 반 (중등) ── */
+.cls-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; }
+.cls-chip { border: 1.5px solid var(--line-strong); background: var(--paper); color: var(--ink); border-radius: var(--pill); padding: 7px 14px; font-size: 13.5px; font-weight: 800; }
+.cls-chip small { font-weight: 700; color: var(--ink-sub); margin-left: 2px; }
+.cls-chip[aria-pressed="true"] { background: var(--sky-ink); border-color: var(--sky-ink); color: #fff; }
+.cls-chip[aria-pressed="true"] small { color: rgba(255, 255, 255, 0.85); }
+.cls-edit { margin-left: 4px; }
+.cls-tag { display: inline-block; margin-left: 6px; font-size: 12px; font-weight: 900; color: #fff; background: var(--sky-ink); border-radius: 8px; padding: 1px 8px; vertical-align: 2px; }
+.ce-row, .ce-add { display: flex; align-items: center; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
+.ce-row .ce-name, .ce-add #ceName { width: 90px; }
+.ce-row .ce-subj, .ce-add #ceSubj { flex: 1; min-width: 90px; }
+.ce-row .ce-count, .ce-add #ceCount { width: 64px; }
+.ce-unit { font-size: 13px; color: var(--ink-sub); }
+.ce-add { border-top: 1px dashed var(--line-strong); padding-top: 10px; margin-top: 12px; }
+.ce-names-box { margin-top: 14px; padding: 12px; border-radius: 12px; background: var(--soft); }
+.ce-ta { width: 100%; font-family: inherit; }
+.ce-names-box .set-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+/* 핸드폰: 반 고르기 */
+.m-cls { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 10px; margin-bottom: 2px; }
+.m-cls .cls-chip { flex: 0 0 auto; padding: 9px 14px; font-size: 14.5px; }
+.m-cls { scrollbar-width: none; }
+.m-cls::-webkit-scrollbar { display: none; }
+
+/* ── 담임 / 교과전담 ── */
+.role-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 6px 0 4px; }
+.role-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 20px 12px; border-radius: 16px;
+  border: 2px solid var(--line-strong); background: var(--paper); color: var(--ink); cursor: pointer; font: inherit; }
+.role-opt span { font-size: 34px; }
+.role-opt b { font-size: 17px; }
+.role-opt small { font-size: 12px; color: var(--ink-sub); text-align: center; }
+.role-opt:hover { border-color: var(--sky-ink); background: var(--sky-bg); }
+.cls-empty { text-align: center; padding: 36px 20px; }
+.cls-empty-ic { font-size: 44px; }
+.cls-empty h2 { font-size: 18px; margin: 8px 0 4px; }
+.cls-empty .btn-primary { margin-top: 10px; }
+.cls-chip.add { border-style: dashed; color: var(--ink-sub); }
+.cls-chip.add[aria-pressed="true"] { background: var(--soft); border-color: var(--line-strong); color: var(--ink); }
+.m-cls-row { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+.m-cls-row input { min-width: 0; font-size: 16px; }
+.m-cls-row #mcName { flex: 1.1; }
+.m-cls-row #mcSubj { flex: 1.2; }
+.m-cls-row #mcCount { width: 62px; flex: 0 0 auto; }
+.m-cls-row span { font-size: 13px; color: var(--ink-sub); }
+.m-seg.two { grid-template-columns: 1fr 1fr; margin: 4px 0 6px; }
+.m-seg.two button { padding: 12px 6px; font-size: 15px; }
+.at-line[hidden], .m-field[hidden], .m-period[hidden] { display: none; }

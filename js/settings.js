@@ -69,6 +69,21 @@ DN.Settings = (function () {
     return { from, to: SCHEMA_VERSION };
   }
 
+  // ── 담임 / 교과전담 ──
+  // 교과전담은 맡은 반(수업 반)마다 관찰 기록을 남기고, 출결·학생 관리·자리·모둠은 쓰지 않는다
+  function role() { return get().role === 'subject' ? 'subject' : 'homeroom'; }
+  function isSubject() { return role() === 'subject'; }
+  function roleChosen() { const r = record(); return !!(r && (r.role === 'homeroom' || r.role === 'subject')); }
+  // 역할 저장. 처음 고르거나(ask 없음) 교사가 동의하면 상황 버튼도 그 역할의 기본 세트로 바꾼다
+  function setRole(r, ask) {
+    r = r === 'subject' ? 'subject' : 'homeroom';
+    const changed = r !== role();
+    save({ role: r });
+    if (changed && (!ask || DN.utils.confirmAsk((r === 'subject' ? '상황 버튼도 교과 수업용 기본 버튼으로 바꿀까요?' : '상황 버튼도 담임용 기본 버튼으로 바꿀까요?') +
+      String.fromCharCode(10) + '(지금 버튼은 지워지고, 이미 남긴 기록은 그대로예요. [취소]를 누르면 버튼은 그대로 둬요.)'))) DN.Records.usePresetSet(r);
+    return changed;
+  }
+
   // ── 화면 스타일 (기기마다 따로, 저장 공간 메타 look) ──
   const LOOKS = [
     { id: 'cute', name: '귀여운', desc: '파스텔 알림장', sw: ['#fdfaf5', '#ffe2d3', '#dff0fb', '#dcf3e6'] },
@@ -140,7 +155,16 @@ DN.Settings = (function () {
       <div class="card set-card">\
         <div class="section-label">화면 스타일</div>' + lookPickerHtml() + '\
         <p class="set-help">이 기기에만 적용돼요. 핸드폰은 핸드폰 ⚙️ 설정에서 따로 고를 수 있어요.</p>\
-        <div class="section-label">우리 반</div>\
+        <div class="section-label">나는</div>\
+        <div class="set-grid">\
+          <label for="setJob">맡은 일</label>\
+          <select id="setJob">\
+            <option value="homeroom"' + (role() === 'homeroom' ? ' selected' : '') + '>담임</option>\
+            <option value="subject"' + (role() === 'subject' ? ' selected' : '') + '>교과전담 (여러 반 수업)</option>\
+          </select>\
+        </div>\
+        <p class="set-help">교과전담은 관찰 기록에서 맡은 반을 골라 기록하고, 출결·학생 관리·자리·모둠 메뉴는 숨겨요.</p>\
+        <div class="section-label">' + (role() === 'subject' ? '학교' : '우리 반') + '</div>\
         <div class="set-grid">\
           <label for="setYear">학년도</label>\
           <input type="number" id="setYear" min="2000" max="2100" value="' + esc(s.schoolYear) + '">\
@@ -174,7 +198,13 @@ DN.Settings = (function () {
 
     bindLookPicker(container);
     container.querySelector('#setSave').addEventListener('click', function () {
+      const job = container.querySelector('#setJob').value;
       save(readForm());
+      if (setRole(job, true)) {
+        toast('설정을 저장했어요. ' + (job === 'subject' ? '교과전담' : '담임') + ' 화면으로 바꿨어요.', 'success');
+        DN.App.refreshNav();
+        return;
+      }
       toast('설정을 저장했어요.', 'success');
       render(container);
     });
@@ -193,5 +223,5 @@ DN.Settings = (function () {
     });
   }
 
-  return { SCHEMA_VERSION, get, save, ensure, defaultSchoolYear, render, look, setLook, applyLook, lookPickerHtml, bindLookPicker };
+  return { SCHEMA_VERSION, get, save, ensure, role, isSubject, roleChosen, setRole, defaultSchoolYear, render, look, setLook, applyLook, lookPickerHtml, bindLookPicker };
 })();

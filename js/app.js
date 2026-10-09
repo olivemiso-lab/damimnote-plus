@@ -7,10 +7,10 @@ DN.App = (function () {
   const { esc } = DN.utils;
   // 교사가 실제로 쓰는 흐름 순서: 명단 → 매일 출결 → 관찰 → 자리·모둠 → 학교 일정
   const TABS = [
-    { id: 'students', icon: '👦', label: '학생 관리', mod: function () { return DN.Students; } },
-    { id: 'attend',   icon: '🗓️', label: '출결 메모', mod: function () { return DN.Attend; } },
+    { id: 'students', icon: '👦', label: '학생 관리', mod: function () { return DN.Students; }, homeroom: true },
+    { id: 'attend',   icon: '🗓️', label: '출결 메모', mod: function () { return DN.Attend; }, homeroom: true },
     { id: 'observe',  icon: '📝', label: '관찰 기록', mod: function () { return DN.Observe; } },
-    { id: 'seating',  icon: '🪑', label: '자리·모둠', mod: function () { return DN.Seating; } },
+    { id: 'seating',  icon: '🪑', label: '자리·모둠', mod: function () { return DN.Seating; }, homeroom: true },
     { id: 'schedule', icon: '📅', label: '학교 일정', mod: function () { return DN.Schedule; } },
     { id: 'sync',     icon: '🔄', label: '핸드폰 연결', mod: function () { return DN.Sync; } },
     { id: 'backup',   icon: '💾', label: '백업',      mod: function () { return DN.Backup; } },
@@ -20,9 +20,15 @@ DN.App = (function () {
   let current = DN.Store.getMeta('lastTab') || TABS[0].id;
   let mobileMode = false;
 
+  // 교과전담에게는 담임 메뉴(학생 관리·출결·자리·모둠)를 숨긴다
+  function tabs() {
+    const subject = DN.Settings.isSubject();
+    return TABS.filter(function (t) { return !(subject && t.homeroom); });
+  }
   function show(id) {
     if (mobileMode) { DN.Mobile.render(document.getElementById('view')); return; }
-    const tab = TABS.find(function (t) { return t.id === id; }) || TABS[0];
+    const list = tabs();
+    const tab = list.find(function (t) { return t.id === id; }) || list.find(function (t) { return t.id === 'observe'; }) || list[0];
     current = tab.id;
     DN.Store.setMeta('lastTab', current);
     document.querySelectorAll('.nav-btn').forEach(function (b) {
@@ -108,13 +114,9 @@ DN.App = (function () {
     }).catch(function () { /* 서비스 워커가 없어도 앱은 그대로 동작 */ });
   }
 
-  function init() {
-    DN.Settings.ensure();
-    const fb = document.getElementById('fbLink');
-    if (fb) fb.href = DN.utils.FEEDBACK_URL;
-    DN.Settings.applyLook(DN.Settings.look());
+  function buildNav() {
     const nav = document.getElementById('nav');
-    nav.innerHTML = TABS.map(function (t) {
+    nav.innerHTML = tabs().map(function (t) {
       return '<button class="nav-btn" data-tab="' + t.id + '">' +
         '<span class="nav-ic">' + t.icon + '</span><span>' + t.label + '</span></button>';
     }).join('') + '<button class="nav-btn to-mobile" id="toMobile"><span class="nav-ic">📱</span><span>핸드폰 화면</span></button>';
@@ -126,10 +128,45 @@ DN.App = (function () {
       DN.Store.setMeta('forceDesktop', '0');
       relayout();
     });
+  }
+  // 역할이 바뀐 뒤: 메뉴를 다시 만들고, 지금 화면이 숨겨졌으면 관찰 기록으로
+  function refreshNav() {
+    buildNav();
+    relayout();
+  }
+
+  // 처음 연 PC: 담임인지 교과전담인지 한 번만 묻는다 (이미 기록이 있는 PC는 묻지 않고 담임으로)
+  function askRole() {
+    if (DN.Settings.roleChosen() || DN.Store.getMeta('roleAsked') === '1') return;
+    DN.Store.setMeta('roleAsked', '1');
+    const used = ['students', 'observations', 'attendance'].some(function (c) { return DN.Store.getAll(c).length; });
+    if (used) return;
+    const m = DN.utils.openModal('어떤 선생님이세요? 👋',
+      '<p class="set-help" style="margin-top:0">맞는 화면으로 준비해 드릴게요. 나중에 ⚙️ 설정에서 바꿀 수 있어요.</p>' +
+      '<div class="role-pick">' +
+        '<button class="role-opt" data-role="homeroom"><span>👩‍🏫</span><b>담임</b><small>우리 반 관찰·출결·자리·모둠·일정</small></button>' +
+        '<button class="role-opt" data-role="subject"><span>📚</span><b>교과전담</b><small>맡은 여러 반의 수업 관찰·일정</small></button>' +
+      '</div>', '');
+    m.addEventListener('click', function (e) {
+      const b = e.target.closest('[data-role]');
+      if (!b) return;
+      DN.Settings.setRole(b.dataset.role);
+      DN.utils.closeModal();
+      if (b.dataset.role === 'subject') { current = 'observe'; refreshNav(); }
+    });
+  }
+
+  function init() {
+    DN.Settings.ensure();
+    const fb = document.getElementById('fbLink');
+    if (fb) fb.href = DN.utils.FEEDBACK_URL;
+    DN.Settings.applyLook(DN.Settings.look());
+    buildNav();
     const mq = window.matchMedia(DN.Mobile.NARROW);
     const onChange = function () { if (DN.Mobile.active() !== mobileMode) relayout(); };
     if (mq.addEventListener) mq.addEventListener('change', onChange); else mq.addListener(onChange);
     relayout();
+    if (!mobileMode) askRole();
     if (DN.Cloud) DN.Cloud.start();
     registerSW();
     // 기록 보호: 저장 공간이 모자라도 브라우저가 이 앱의 기록을 저절로 지우지 않게 요청
@@ -137,5 +174,5 @@ DN.App = (function () {
   }
 
   document.addEventListener('DOMContentLoaded', init);
-  return { show, refreshBanner, relayout };
+  return { show, refreshBanner, relayout, refreshNav };
 })();

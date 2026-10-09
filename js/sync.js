@@ -45,7 +45,14 @@ DN.Sync = (function () {
     const o = Object.assign(base(r), { date: r.date, studentNo: r.studentNo, presetId: str(r.presetId, 80), label: str(r.label, 60), memo: str(r.memo, 200), device: 'mobile' });
     const w = Array.isArray(r.with) ? r.with.filter(function (n) { return n >= 1 && n <= 99 && n % 1 === 0 && n !== r.studentNo; }).slice(0, 10) : [];
     if (w.length) o.with = w;
+    if (r.cls && ID_RE.test(r.cls)) o.cls = r.cls;
     return o;
+  }
+  // 교과전담 수업 반 (명단·이름은 오가지 않음)
+  function cleanClass(r) {
+    if (!baseOk(r) || !str(r.name, 20)) return null;
+    const n = parseInt(r.count, 10);
+    return Object.assign(base(r), { name: str(r.name, 20), subject: str(r.subject, 20), count: n >= 1 && n <= 60 ? n : 25, order: typeof r.order === 'number' ? r.order : 0 });
   }
   function cleanAttendance(r) {
     if (!baseOk(r) || !DN.Events.isDate(r.date) || !(r.studentNo >= 1 && r.studentNo <= 99 && r.studentNo % 1 === 0)) return null;
@@ -154,6 +161,7 @@ DN.Sync = (function () {
     const obj = envelope('mobile', {
       observations: pick(R.OBS),
       attendance: pick(R.ATT),
+      classes: DN.Store.getAll(R.CLS),
       eventDone: events.filter(function (e) { return !e.deleted; }).map(function (e) { return { id: e.id, done: !!e.done, updatedAt: e.updatedAt }; }),
       // 핸드폰에서 새로 넣은 일정(지운 것 포함) — 회의처럼 갑자기 생긴 일정
       events: events.filter(function (e) { return e.source === 'mobile'; }),
@@ -184,6 +192,7 @@ DN.Sync = (function () {
     const attIn = clean(d.attendance, function (r) { return sentMark(cleanAttendance(r)); });
     const obs = mergeList(DN.Store.getAll(R.OBS), obsIn);
     const att = mergeList(DN.Store.getAll(R.ATT), attIn);
+    const cls = mergeList(DN.Store.getAll(R.CLS), clean(d.classes, cleanClass));
     // 완료 체크: 핸드폰에서 더 나중에 바꾼 것만, 값이 다를 때만
     const events = DN.Store.getAll('events').slice();
     let doneChanged = 0;
@@ -203,7 +212,7 @@ DN.Sync = (function () {
     const ev = mergeList(events, mobileEv);
     const rawCount = (Array.isArray(d.observations) ? d.observations.length : 0) + (Array.isArray(d.attendance) ? d.attendance.length : 0);
     return {
-      obs: obs, att: att, events: ev.list, evAdded: ev.added, evChanged: ev.updated + ev.removed, doneChanged: doneChanged,
+      obs: obs, att: att, cls: cls, events: ev.list, evAdded: ev.added, evChanged: ev.updated + ev.removed, doneChanged: doneChanged,
       invalid: rawCount - obsIn.length - attIn.length,
     };
   }
@@ -225,6 +234,7 @@ DN.Sync = (function () {
     const map = {};
     map[R.OBS] = p.obs.list;
     map[R.ATT] = p.att.list;
+    map[R.CLS] = p.cls.list;
     map.events = p.events;
     if (!writeAll(map)) return null;
     DN.Store.setMeta('lastMergeAt', new Date().toISOString());
@@ -235,9 +245,12 @@ DN.Sync = (function () {
   function buildPcFile() {
     const s = DN.Settings.get();
     R.presets(); // 기본 버튼이 아직 없으면 만든다
+    const settings = { grade: s.grade, classNo: s.classNo, studentCount: s.studentCount, schoolYear: s.schoolYear };
+    if (DN.Settings.roleChosen()) settings.role = DN.Settings.role();   // 담임/교과전담을 고른 PC만 핸드폰에 알려 준다
     const obj = envelope('pc', {
-      settings: { grade: s.grade, classNo: s.classNo, studentCount: s.studentCount, schoolYear: s.schoolYear },
+      settings: settings,
       presets: DN.Store.getAll(R.PRE),
+      classes: DN.Store.getAll(R.CLS),
       // 담당자 이름·메모·첨부는 보내지 않는다 (§8.1). 툼스톤도 보내 핸드폰에서 지워지게
       events: DN.Store.getAll('events').map(function (e) {
         return Object.assign({}, e, { owner: '', note: '', attachmentIds: [] });
@@ -254,19 +267,22 @@ DN.Sync = (function () {
     const presets = clean(d.presets, cleanPreset);
     const events = mergeList(DN.Store.getAll('events'), clean(d.events, cleanEvent));
     const timetables = mergeList(DN.Store.getAll(DN.Weekly.COL), clean(d.timetables, cleanTimetable));
+    const cls = mergeList(DN.Store.getAll(R.CLS), clean(d.classes, cleanClass));
     const s = d.settings || {};
     const settings = {};
+    if (s.role === 'homeroom' || s.role === 'subject') settings.role = s.role;
     if (s.grade >= 1 && s.grade <= 6) settings.grade = s.grade;
     if (s.classNo >= 1 && s.classNo <= 30) settings.classNo = s.classNo;
     if (s.studentCount >= 1 && s.studentCount <= 60) settings.studentCount = s.studentCount;
     if (s.schoolYear >= 2000 && s.schoolYear <= 2100) settings.schoolYear = s.schoolYear;
-    return { presets: presets, events: events, timetables: timetables, settings: settings };
+    return { presets: presets, cls: cls, events: events, timetables: timetables, settings: settings };
   }
   function applyPcReceive(obj) {
     const p = planPcReceive(obj);
     const map = { events: p.events.list };
     map[DN.Weekly.COL] = p.timetables.list;
     if (p.presets.length) map[R.PRE] = p.presets;
+    map[R.CLS] = p.cls.list;
     if (!writeAll(map)) return null;
     if (Object.keys(p.settings).length) DN.Settings.save(p.settings);
     DN.Store.setMeta('lastReceiveAt', new Date().toISOString());

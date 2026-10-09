@@ -21,6 +21,7 @@ DN.Mobile = (function () {
     memo: '', memoOpen: false,
     free: '',                 // 직접 쓰기 글
     type: '', reason: '', period: '',
+    clsAdd: false,            // 교과전담: 반 추가 칸 열림
     undo: null,               // { col, ids, text }
   };
   let undoTimer = null;
@@ -192,8 +193,11 @@ DN.Mobile = (function () {
     const coarse = window.matchMedia('(pointer: coarse)').matches;
     rootEl.innerHTML = '<div class="m-wrap m-setup">' +
       '<div class="m-brand big">📒 담임노트<span class="plus">+</span></div>' +
-      '<p class="m-lead">우리 반 학생 수만 알려 주시면 바로 기록을 시작할 수 있어요.</p>' +
-      '<label class="m-field">학생 수 <input type="number" id="suCount" min="1" max="60" inputmode="numeric" value="' + esc(s.studentCount) + '"></label>' +
+      '<p class="m-lead">학생 수만 알려 주시면 바로 기록을 시작할 수 있어요.</p>' +
+      '<div class="m-seg two" id="suJob"><button type="button" data-v="homeroom" aria-pressed="' + (!DN.Settings.isSubject()) + '">👩‍🏫 담임</button>' +
+        '<button type="button" data-v="subject" aria-pressed="' + DN.Settings.isSubject() + '">📚 교과전담</button></div>' +
+      '<p class="set-help" id="suJobHelp"' + (DN.Settings.isSubject() ? '' : ' hidden') + '>맡은 반(예: 3-1 과학 24명)은 관찰 기록에서 바로 추가할 수 있어요.</p>' +
+      '<label class="m-field" id="suCountRow"' + (DN.Settings.isSubject() ? ' hidden' : '') + '>학생 수 <input type="number" id="suCount" min="1" max="60" inputmode="numeric" value="' + esc(s.studentCount) + '"></label>' +
       '<label class="m-field">학년 <select id="suGrade">' + [1, 2, 3, 4, 5, 6].map(function (g) {
         return '<option value="' + g + '"' + (g === s.grade ? ' selected' : '') + '>' + g + '학년</option>';
       }).join('') + '</select></label>' +
@@ -202,9 +206,19 @@ DN.Mobile = (function () {
       installGuide() +
       '</div>';
     bindInstall(rootEl);
+    let job = DN.Settings.role();
+    rootEl.querySelector('#suJob').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-v]');
+      if (!b) return;
+      job = b.dataset.v;
+      rootEl.querySelectorAll('#suJob [data-v]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      rootEl.querySelector('#suCountRow').hidden = job === 'subject';
+      rootEl.querySelector('#suJobHelp').hidden = job !== 'subject';
+    });
     rootEl.querySelector('#suStart').addEventListener('click', function () {
-      const n = parseInt(rootEl.querySelector('#suCount').value, 10);
+      const n = job === 'subject' ? s.studentCount : parseInt(rootEl.querySelector('#suCount').value, 10);
       if (!(n >= 1 && n <= 60)) { toast('학생 수를 1~60 사이로 입력해 주세요.', 'error'); return; }
+      DN.Settings.setRole(job);
       const patch = { studentCount: n, grade: +rootEl.querySelector('#suGrade').value };
       if (rootEl.querySelector('#suPhone').checked) patch.deviceRole = 'mobile';
       DN.Settings.save(patch);
@@ -312,12 +326,13 @@ DN.Mobile = (function () {
     body.innerHTML = homeInstallCard() +
       '<div class="m-actions home">' +
         '<button class="m-action obs" id="mGoObs"><span>📝</span>관찰 기록</button>' +
-        '<button class="m-action att" id="mGoAtt"><span>🗓️</span>출결</button>' +
+        (DN.Settings.isSubject() ? '' : '<button class="m-action att" id="mGoAtt"><span>🗓️</span>출결</button>') +
         '<button class="m-action ev" id="mGoEv"><span>📌</span><b>일정' + (n ? '<i class="m-badge">' + n + '</i>' : '') + '</b></button></div>' +
       homeIllust();
     bindInstall(body);
     body.querySelector('#mGoObs').addEventListener('click', function () { go('obs'); });
-    body.querySelector('#mGoAtt').addEventListener('click', function () { go('att'); });
+    const att = body.querySelector('#mGoAtt');
+    if (att) att.addEventListener('click', function () { go('att'); });
     body.querySelector('#mGoEv').addEventListener('click', function () { go('ev'); });
   }
 
@@ -441,7 +456,7 @@ DN.Mobile = (function () {
   }
   function bindCommon(body) {
     const pick = body.querySelector('#mPicker');
-    pick.innerHTML = DN.Picker.html(st.selected, { showNames: !isPhone() });
+    pick.innerHTML = DN.Picker.html(st.selected, { showNames: !isPhone(), cls: st.view === 'obs' ? obsCls() : '' });
     DN.Picker.bind(pick, st.selected);
     const open = body.querySelector('#mMemoOpen');
     if (open) open.addEventListener('click', function () {
@@ -465,20 +480,70 @@ DN.Mobile = (function () {
   }
 
   // ── 관찰 기록 ──
+  // 관찰: 우리 반 / 수업 반 (마지막에 고른 반을 기억)
+  // 교과전담: 마지막에 고른 반 (없으면 첫 반). 담임: 언제나 우리 반('')
+  function obsCls() {
+    if (!DN.Settings.isSubject()) return '';
+    const c = DN.Store.getMeta('mCls') || '';
+    return c && R.getClass(c) ? c : (R.classes()[0] || {}).id || '';
+  }
+  function clsChips() {
+    if (!DN.Settings.isSubject()) return '';
+    const cur = obsCls();
+    return '<div class="m-cls" id="mCls">' + R.classes().map(function (c) {
+        return '<button class="cls-chip" data-cls="' + esc(c.id) + '" aria-pressed="' + (cur === c.id) + '">📚 ' + esc(c.name) + (c.subject ? ' <small>' + esc(c.subject) + '</small>' : '') + '</button>';
+      }).join('') + '<button class="cls-chip add" id="mClsAdd" aria-pressed="' + st.clsAdd + '">＋ 반</button></div>' +
+      (st.clsAdd || !cur ? clsAddCard(!cur) : '');
+  }
+  // 반 추가 칸 (교과전담)
+  function clsAddCard(first) {
+    return '<section class="m-card m-cls-add"><h2>' + (first ? '📚 맡은 반을 추가해 주세요' : '＋ 반 추가') + '</h2>' +
+      '<div class="m-cls-row"><input id="mcName" maxlength="20" placeholder="반 (예: 3-1)"><input id="mcSubj" maxlength="20" placeholder="과목 (선택)">' +
+      '<input id="mcCount" type="number" min="1" max="60" inputmode="numeric" value="25" aria-label="학생 수"><span>명</span></div>' +
+      '<button class="btn-primary m-big" id="mcAdd">반 추가</button></section>';
+  }
+  function bindClsAdd(body) {
+    const tog = body.querySelector('#mClsAdd');
+    if (tog) tog.addEventListener('click', function () { st.clsAdd = !st.clsAdd; render(rootEl); });
+    const add = body.querySelector('#mcAdd');
+    if (add) add.addEventListener('click', function () {
+      const name = body.querySelector('#mcName').value.trim();
+      if (!name) { toast('반 이름을 써 주세요 (예: 3-1).', 'info'); body.querySelector('#mcName').focus(); return; }
+      const c = R.addClass(name, body.querySelector('#mcCount').value, body.querySelector('#mcSubj').value);
+      if (!c) { toast('반을 추가하지 못했어요.', 'error'); return; }
+      DN.Store.setMeta('mCls', c.id);
+      st.clsAdd = false;
+      st.selected.clear();
+      toast(R.className(c.id) + ' 반을 추가했어요.', 'success');
+      render(rootEl);
+      if (DN.Cloud) DN.Cloud.soon(true);
+    });
+  }
+  function clsPrefix() { const c = obsCls(); return c ? R.className(c) + ' ' : ''; }
   function renderObs(body) {
     const groups = R.presetGroups();
-    body.innerHTML = pickerSection() +
+    if (DN.Settings.isSubject() && !obsCls()) { body.innerHTML = clsChips(); bindClsAdd(body); return; }
+    body.innerHTML = clsChips() + pickerSection() +
       '<section class="m-card" id="mPresetCard"><h2>② 상황 누르기 <small>누르면 바로 저장돼요</small></h2>' +
       (groups.length ? groups.map(function (g) {
         return '<div class="m-preset-g"><div class="m-gname">' + esc(g.name) + '</div><div class="m-presets">' +
           g.items.map(function (p) { return '<button class="preset-btn" data-preset="' + esc(p.id) + '">' + esc(p.label) + '</button>'; }).join('') + '</div>' +
-          (g.items.some(function (p) { return R.isConflictLabel(p.label); }) ? '<p class="preset-tip">💡 다툰 친구들을 함께 고르고 누르면 자리·모둠에서 떼어 놓도록 추천해요</p>' : '') + '</div>';
+          (!obsCls() && g.items.some(function (p) { return R.isConflictLabel(p.label); }) ? '<p class="preset-tip">💡 다툰 친구들을 함께 고르고 누르면 자리·모둠에서 떼어 놓도록 추천해요</p>' : '') + '</div>';
       }).join('') : '<p class="m-empty">상황 버튼이 없어요. PC에서 [일정 보내기]를 받으면 PC의 버튼이 들어와요.</p>') +
       '<div class="m-memo">' + memoHtml('') + '</div></section>' +
       '<section class="m-card m-free"><h2>✏️ 직접 쓰기 <small>버튼에 없는 내용</small></h2>' +
       '<textarea id="mFree" rows="2" maxlength="60" placeholder="예: 7번 학생을 때림 / 활동 후 뒷정리를 잘함">' + esc(st.free) + '</textarea>' +
       '<button class="btn-primary m-big" id="mFreeSave">저장</button></section>';
     bindCommon(body);
+    bindClsAdd(body);
+    const chips = body.querySelector('#mCls');
+    if (chips) chips.addEventListener('click', function (e) {
+      const b = e.target.closest('[data-cls]');
+      if (!b || b.dataset.cls === obsCls()) return;
+      DN.Store.setMeta('mCls', b.dataset.cls);
+      st.selected.clear();
+      render(rootEl);
+    });
     const free = body.querySelector('#mFree');
     free.addEventListener('input', function () { st.free = free.value; });
     body.querySelector('#mFreeSave').addEventListener('click', function () {
@@ -486,10 +551,10 @@ DN.Mobile = (function () {
       const text = free.value.trim();
       if (!text) { toast('내용을 써 주세요.', 'info'); free.focus(); return; }
       const nos = Array.from(st.selected).sort(function (a, b2) { return a - b2; });
-      const saved = R.addFreeObservations(st.date, nos, text);
+      const saved = R.addFreeObservations(st.date, nos, text, obsCls());
       if (!saved.length) { toast('저장하지 못했어요.', 'error'); return; }
       st.free = '';
-      afterSave(R.OBS, saved, DN.Picker.listText(nos) + ' · ' + text + ' 저장됨');
+      afterSave(R.OBS, saved, clsPrefix() + DN.Picker.listText(nos) + ' · ' + text + ' 저장됨');
     });
     body.querySelector('#mPresetCard').addEventListener('click', function (e) {
       const b = e.target.closest('[data-preset]');
@@ -498,9 +563,9 @@ DN.Mobile = (function () {
       if (!p) return;
       if (!st.selected.size) { toast('먼저 번호를 골라 주세요.', 'info'); return; }
       const nos = Array.from(st.selected).sort(function (a, b2) { return a - b2; });
-      const saved = R.addObservations(st.date, nos, p, st.memoOpen ? st.memo.trim() : '');
+      const saved = R.addObservations(st.date, nos, p, st.memoOpen ? st.memo.trim() : '', obsCls());
       if (!saved.length) { toast('저장하지 못했어요.', 'error'); return; }
-      afterSave(R.OBS, saved, DN.Picker.listText(nos) + ' · ' + p.label + ' 저장됨');
+      afterSave(R.OBS, saved, clsPrefix() + DN.Picker.listText(nos) + ' · ' + p.label + ' 저장됨');
     });
   }
 
@@ -571,6 +636,8 @@ DN.Mobile = (function () {
     const body = '<div class="m-top-links"><a class="m-guide-top" href="guide.html" target="_blank" rel="noopener">📖 사용 설명서</a>' +
       '<a class="m-guide-top fb" href="' + DN.utils.FEEDBACK_URL + '" target="_blank" rel="noopener">💬 의견 보내기</a></div>' +
       '<div class="fgrid">' +
+      '<label for="mnJob">맡은 일</label><select id="mnJob"><option value="homeroom"' + (DN.Settings.isSubject() ? '' : ' selected') + '>담임</option>' +
+        '<option value="subject"' + (DN.Settings.isSubject() ? ' selected' : '') + '>교과전담</option></select>' +
       '<label for="mnCount">학생 수</label><input type="number" id="mnCount" min="1" max="60" inputmode="numeric" value="' + esc(s.studentCount) + '">' +
       '<label for="mnGrade">학년</label><select id="mnGrade">' + [1, 2, 3, 4, 5, 6].map(function (g) {
         return '<option value="' + g + '"' + (g === s.grade ? ' selected' : '') + '>' + g + '학년</option>'; }).join('') + '</select>' +
@@ -635,6 +702,7 @@ DN.Mobile = (function () {
       const n = parseInt(m.querySelector('#mnCount').value, 10);
       if (!(n >= 1 && n <= 60)) { toast('학생 수를 1~60 사이로 입력해 주세요.', 'error'); return; }
       DN.Settings.save({ studentCount: n, grade: +m.querySelector('#mnGrade').value, deviceRole: m.querySelector('#mnPhone').checked ? 'mobile' : 'pc' });
+      if (DN.Settings.setRole(m.querySelector('#mnJob').value, true)) st.view = 'home';
       closeModal();
       toast('저장했어요.', 'success');
       DN.App.relayout();

@@ -10,9 +10,9 @@ DN.Picker = (function () {
   // selected: Set<number>
   function html(selected, opts) {
     opts = opts || {};
-    const names = opts.showNames === false ? {} : DN.Records.nameMap();
-    const nos = DN.Records.studentNumbers();
-    if (!nos.length) return '<p class="side-empty">설정에서 학생 수를 먼저 정해 주세요.</p>';
+    const names = opts.showNames === false ? {} : DN.Records.nameMap(opts.cls);
+    const nos = DN.Records.studentNumbers(opts.cls);
+    if (!nos.length) return '<p class="side-empty">' + (opts.cls ? '이 반의 학생 수를 먼저 정해 주세요.' : '설정에서 학생 수를 먼저 정해 주세요.') + '</p>';
     return '<div class="picker-tools"><span class="picker-count">' + selected.size + '명 선택</span>' +
       '<button type="button" class="btn-ghost picker-all" data-pick="all">모두</button>' +
       '<button type="button" class="btn-ghost picker-all" data-pick="none">해제</button></div>' +
@@ -27,7 +27,7 @@ DN.Picker = (function () {
     box.addEventListener('click', function (e) {
       const b = e.target.closest('.no-btn, [data-pick]');
       if (!b || !box.contains(b)) return;
-      if (b.dataset.pick === 'all') DN.Records.studentNumbers().forEach(function (n) { selected.add(n); });
+      if (b.dataset.pick === 'all') box.querySelectorAll('.no-btn').forEach(function (x) { selected.add(+x.dataset.no); });
       else if (b.dataset.pick === 'none') selected.clear();
       else {
         const n = +b.dataset.no;

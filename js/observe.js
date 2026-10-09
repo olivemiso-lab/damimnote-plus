@@ -22,6 +22,7 @@ DN.Observe = (function () {
     from: '', to: '',
     student: null,
     last: null,          // 방금 저장한 묶음 { ids, text } — 되돌리기용
+    cls: '',             // '' = 우리 반(담임), 그 밖은 수업 반 id
   };
 
   function md(d) { return (+d.slice(5, 7)) + '/' + (+d.slice(8)); }
@@ -36,12 +37,25 @@ DN.Observe = (function () {
 
   function render(container) {
     rootEl = container;
+    const subject = DN.Settings.isSubject();
+    // 교과전담: 고른 반이 없으면 첫 반으로. 담임: 언제나 우리 반
+    if (!subject) state.cls = '';
+    else if (!R.getClass(state.cls)) state.cls = (R.classes()[0] || {}).id || '';
+    if (subject && !state.cls) {
+      container.innerHTML = '<div class="page-head"><h1>📝 관찰 기록</h1></div>' +
+        '<div class="card cls-empty"><div class="cls-empty-ic">📚</div><h2>맡은 반을 먼저 등록해 주세요</h2>' +
+        '<p class="set-help">예: 3-1 과학 24명, 3-2 과학 25명… 반을 등록하면 반마다 번호를 눌러 수업 관찰을 남길 수 있어요.</p>' +
+        '<button class="btn-primary" id="obClsFirst">＋ 반 등록하기</button></div>';
+      container.querySelector('#obClsFirst').addEventListener('click', openClassEditor);
+      return;
+    }
     container.innerHTML = '\
       <div class="page-head"><h1>📝 관찰 기록</h1><span class="pv-spacer"></span>\
         <button class="btn-ghost" id="obPresets">상황 버튼 편집</button></div>\
+      ' + (subject ? '<div class="cls-bar" id="obCls">' + clsBarHtml() + '</div>' : '') + '\
       <div class="card quick">\
         <div class="quick-head">\
-          <h2 class="side-title">빠른 기록</h2>\
+          <h2 class="side-title">빠른 기록' + (state.cls ? ' <span class="cls-tag">' + esc(R.className(state.cls)) + '</span>' : '') + '</h2>\
           <label class="quick-date">날짜 <input type="date" id="obDate" value="' + esc(state.date) + '"></label>\
           <span class="quick-help">① 번호를 고르고 ② 상황을 누르면 바로 저장돼요.</span>\
         </div>\
@@ -58,13 +72,13 @@ DN.Observe = (function () {
         <div id="obLast" class="last-save"></div>\
       </div>\
       <div class="ob-grid">\
-        <div class="card"><div class="side-head"><h2 class="side-title">학생별 기록</h2><button class="btn-secondary side-add" id="obCsv" title="고른 기간의 모든 학생 관찰 기록을 엑셀 파일로 받아요">📥 엑셀로 받기</button></div>\
+        <div class="card"><div class="side-head"><h2 class="side-title">' + (state.cls ? esc(R.className(state.cls)) + ' 학생별' : '학생별 기록') + '</h2><button class="btn-secondary side-add" id="obCsv" title="고른 기간의 모든 학생 관찰 기록을 엑셀 파일로 받아요">📥 엑셀로 받기</button></div>\
           <div class="period-bar" id="obPeriod"></div><div id="obStudents"></div></div>\
         <div class="card" id="obDetail"></div>\
       </div>';
 
     const pick = container.querySelector('#obPicker');
-    pick.innerHTML = DN.Picker.html(state.selected);
+    pick.innerHTML = DN.Picker.html(state.selected, { cls: state.cls });
     DN.Picker.bind(pick, state.selected);
     renderPresetButtons();
     renderLast();
@@ -84,6 +98,93 @@ DN.Observe = (function () {
     free.addEventListener('input', function () { state.free = free.value; });
     free.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) recordFree(); });
     container.querySelector('#obFreeSave').addEventListener('click', recordFree);
+    const clsBar = container.querySelector('#obCls');
+    if (clsBar) clsBar.addEventListener('click', function (e) {
+      if (e.target.closest('#obClsEdit')) { openClassEditor(); return; }
+      const b = e.target.closest('[data-cls]');
+      if (!b || b.dataset.cls === state.cls) return;
+      state.cls = b.dataset.cls;
+      state.selected.clear(); state.student = null; state.last = null;
+      render(container);
+    });
+  }
+
+  // ── 우리 반 / 수업 반 고르기 ──
+  function clsBarHtml() {
+    return R.classes().map(function (c) {
+        return '<button class="cls-chip" data-cls="' + esc(c.id) + '" aria-pressed="' + (state.cls === c.id) + '">📚 ' + esc(c.name) +
+          (c.subject ? ' <small>' + esc(c.subject) + '</small>' : '') + '</button>';
+      }).join('') +
+      '<button class="btn-ghost cls-edit" id="obClsEdit">＋ 반 관리</button>';
+  }
+
+  // 수업 반 등록·고치기 (이름·과목·학생 수, 명단 붙여넣기)
+  function openClassEditor() {
+    const draw = function () {
+      const list = R.classes();
+      return '<p class="set-help" style="margin-top:0">수업에 들어가는 반을 등록하면, 관찰 기록에서 반을 골라 수업 관찰을 남길 수 있어요. 핸드폰에도 똑같이 들어가요.</p>' +
+        (list.length ? list.map(function (c) {
+          const n = Object.keys(R.classNameMap(c.id)).length;
+          return '<div class="ce-row" data-id="' + esc(c.id) + '">' +
+            '<input class="ce-name" maxlength="20" value="' + esc(c.name) + '" aria-label="반 이름">' +
+            '<input class="ce-subj" maxlength="20" value="' + esc(c.subject || '') + '" placeholder="과목" aria-label="과목">' +
+            '<input class="ce-count" type="number" min="1" max="60" value="' + esc(c.count) + '" aria-label="학생 수"><span class="ce-unit">명</span>' +
+            '<button class="btn-ghost ce-names" data-names="' + esc(c.id) + '">명단' + (n ? ' ' + n + '명' : '') + '</button>' +
+            '<button class="ic del" data-rm="' + esc(c.id) + '" aria-label="반 지우기">✕</button></div>';
+        }).join('') : '<p class="side-empty">아직 등록한 수업 반이 없어요.</p>') +
+        '<div class="ce-add"><input id="ceName" maxlength="20" placeholder="반 (예: 3-1)"><input id="ceSubj" maxlength="20" placeholder="과목 (예: 과학)">' +
+        '<input id="ceCount" type="number" min="1" max="60" value="25"><span class="ce-unit">명</span><button class="btn-secondary" id="ceAdd">추가</button></div>' +
+        '<p class="set-help">명단(이름)은 이 PC에만 저장되고 구글 드라이브에는 올라가지 않아요. 번호만으로도 쓸 수 있어요.</p>';
+    };
+    const m = openModal('맡은 반 관리', '<div id="ceBox">' + draw() + '</div>', '<span class="pv-spacer"></span><button class="btn-primary" data-close>완료</button>');
+    const box = m.querySelector('#ceBox');
+    const redraw = function () { box.innerHTML = draw(); };
+    box.addEventListener('change', function (e) {
+      const row = e.target.closest('.ce-row');
+      if (!row) return;
+      if (e.target.classList.contains('ce-name')) { if (e.target.value.trim()) R.updateClass(row.dataset.id, { name: e.target.value }); else redraw(); }
+      if (e.target.classList.contains('ce-subj')) R.updateClass(row.dataset.id, { subject: e.target.value });
+      if (e.target.classList.contains('ce-count')) R.updateClass(row.dataset.id, { count: e.target.value });
+    });
+    box.addEventListener('click', function (e) {
+      const rm = e.target.closest('[data-rm]'), nm = e.target.closest('[data-names]');
+      if (rm) {
+        if (!confirmAsk('이 반을 목록에서 지울까요? 이미 남긴 관찰 기록은 백업 파일에 그대로 남아요.')) return;
+        R.removeClass(rm.dataset.rm); redraw(); return;
+      }
+      if (nm) { openNames(nm.dataset.names, redraw); return; }
+      if (e.target.id === 'ceAdd') {
+        const name = box.querySelector('#ceName').value.trim();
+        if (!name) { toast('반 이름을 써 주세요 (예: 3-1).', 'info'); return; }
+        R.addClass(name, box.querySelector('#ceCount').value, box.querySelector('#ceSubj').value);
+        redraw();
+        box.querySelector('#ceName').focus();
+      }
+    });
+    m.addEventListener('click', function (e) { if (e.target.closest('[data-close]') && rootEl && rootEl.isConnected) render(rootEl); });
+  }
+  function openNames(id, after) {
+    const cur = R.classNameMap(id);
+    const text = Object.keys(cur).sort(function (a, b) { return a - b; }).map(function (k) { return k + '\t' + cur[k]; }).join('\n');
+    const back = document.getElementById('dnModal');
+    const box = document.createElement('div');
+    box.className = 'ce-names-box';
+    box.innerHTML = '<div class="section-label">' + esc(R.className(id)) + ' 명단</div>' +
+      '<p class="set-help" style="margin-top:0">엑셀에서 <b>번호·이름</b> 두 칸을 복사해 붙여 넣으세요. 한 줄에 한 명 (예: 5 홍길동).</p>' +
+      '<textarea rows="8" class="ce-ta">' + esc(text) + '</textarea>' +
+      '<div class="set-actions"><button class="btn-cancel" data-nc>취소</button><button class="btn-primary" data-ns>명단 저장</button></div>';
+    const body = back.querySelector('.modal-body');
+    body.appendChild(box);
+    box.querySelector('textarea').focus();
+    box.addEventListener('click', function (e) {
+      if (e.target.closest('[data-nc]')) { box.remove(); return; }
+      if (e.target.closest('[data-ns]')) {
+        const n = R.setClassNames(id, box.querySelector('textarea').value);
+        toast(n + '명 명단을 저장했어요.', 'success');
+        box.remove();
+        after();
+      }
+    });
   }
 
   // ── 빠른 기록 ──
@@ -93,7 +194,7 @@ DN.Observe = (function () {
     box.innerHTML = groups.length ? groups.map(function (g) {
       return '<div class="preset-group"><span class="preset-gname">' + esc(g.name) + '</span>' +
         g.items.map(function (p) { return '<button class="preset-btn" data-preset="' + esc(p.id) + '">' + esc(p.label) + '</button>'; }).join('') +
-        (g.items.some(function (p) { return R.isConflictLabel(p.label); }) ? '<p class="preset-tip">💡 다툰 친구들을 함께 고르고 누르면 자리·모둠에서 떼어 놓도록 추천해요</p>' : '') + '</div>';
+        (!state.cls && g.items.some(function (p) { return R.isConflictLabel(p.label); }) ? '<p class="preset-tip">💡 다툰 친구들을 함께 고르고 누르면 자리·모둠에서 떼어 놓도록 추천해요</p>' : '') + '</div>';
     }).join('') : '<p class="side-empty">상황 버튼이 없어요. [상황 버튼 편집]에서 추가해 주세요.</p>';
     box.addEventListener('click', function (e) {
       const b = e.target.closest('[data-preset]');
@@ -103,12 +204,12 @@ DN.Observe = (function () {
 
   function record(presetId) {
     const p = R.presets().find(function (x) { return x.id === presetId; });
-    if (p) save(p.label, function (nos) { return R.addObservations(state.date, nos, p, state.memoOpen ? state.memo.trim() : ''); });
+    if (p) save(p.label, function (nos) { return R.addObservations(state.date, nos, p, state.memoOpen ? state.memo.trim() : '', state.cls); });
   }
   function recordFree() {
     const t = (state.free || '').trim();
     if (!t) { toast('내용을 써 주세요.', 'info'); rootEl.querySelector('#obFree').focus(); return; }
-    save(t, function (nos) { return R.addFreeObservations(state.date, nos, t); }, true);
+    save(t, function (nos) { return R.addFreeObservations(state.date, nos, t, state.cls); }, true);
   }
   function save(label, add, isFree) {
     if (!state.selected.size) { toast('먼저 학생 번호를 골라 주세요.', 'info'); return; }
@@ -117,7 +218,7 @@ DN.Observe = (function () {
     const saved = add(nos);
     if (!saved.length) { toast('저장하지 못했어요. 저장 공간을 확인해 주세요.', 'error'); return; }
     if (isFree) state.free = '';
-    const text = DN.Picker.listText(nos) + ' · ' + label;
+    const text = (state.cls ? R.className(state.cls) + ' ' : '') + DN.Picker.listText(nos) + ' · ' + label;
     state.last = { ids: saved.map(function (r) { return r.id; }), text: text + (state.date !== today() ? ' (' + md(state.date) + ')' : '') };
     toast(text + ' 저장됨', 'success');
     state.selected.clear();
@@ -167,9 +268,9 @@ DN.Observe = (function () {
   // 고른 기간의 관찰 기록 전체 → CSV (엑셀에서 한글이 깨지지 않도록 BOM)
   function exportCsv() {
     const r = range();
-    const rows = R.observationRows(r.from, r.to);
+    const rows = R.observationRows(r.from, r.to, null, state.cls);
     if (rows.length < 2) { toast('이 기간에 관찰 기록이 없어요.', 'info'); return; }
-    const name = '관찰기록_' + (r.from ? r.from + '~' + r.to : '전체') + '.csv';
+    const name = (state.cls ? R.className(state.cls).replace(/\s+/g, '_') + '_수업관찰_' : '관찰기록_') + (r.from ? r.from + '~' + r.to : '전체') + '.csv';
     DN.Backup.download(name, R.toCsv(rows), 'text/csv;charset=utf-8');
     toast('관찰 기록 ' + (rows.length - 1) + '건을 엑셀 파일로 받았어요.', 'success');
   }
@@ -181,10 +282,10 @@ DN.Observe = (function () {
 
   function renderStudents() {
     const r = range();
-    const list = R.observations(r.from, r.to);
+    const list = R.observations(r.from, r.to, state.cls);
     const counts = R.countByStudent(list);
-    const names = R.nameMap();
-    const nos = R.studentNumbers();
+    const names = R.nameMap(state.cls);
+    const nos = R.studentNumbers(state.cls);
     const box = rootEl.querySelector('#obStudents');
     box.innerHTML = '<div class="stu-counts">' + nos.map(function (n) {
       const c = counts[n] || 0;
@@ -209,10 +310,10 @@ DN.Observe = (function () {
     }
     const no = state.student;
     const r = range();
-    const names = R.nameMap();
-    const list = R.observations(r.from, r.to).filter(function (x) { return x.studentNo === no; });
+    const names = R.nameMap(state.cls);
+    const list = R.observations(r.from, r.to, state.cls).filter(function (x) { return x.studentNo === no; });
     const byLabel = R.countByLabel(list);
-    box.innerHTML = '<div class="side-head"><h2 class="side-title">' + esc(R.label(no, names)) + '</h2>' +
+    box.innerHTML = '<div class="side-head"><h2 class="side-title">' + (state.cls ? esc(R.className(state.cls)) + ' ' : '') + esc(R.label(no, names)) + '</h2>' +
       '<button class="btn-secondary side-add" id="obCopy"' + (list.length ? '' : ' disabled') + '>📋 복사</button></div>' +
       '<p class="set-help">' + esc(periodText()) + ' · ' + list.length + '건</p>' +
       (byLabel.length ? '<div class="label-counts">' + byLabel.map(function (c) {
@@ -228,8 +329,8 @@ DN.Observe = (function () {
 
     const copy = box.querySelector('#obCopy');
     copy.addEventListener('click', function () {
-      copyText(R.copyText(no, r.from, r.to, names)).then(function (ok) {
-        toast(ok ? '복사했어요. 한글에 붙여 넣어 통지표 작성에 참고하세요.' : '복사하지 못했어요.', ok ? 'success' : 'error');
+      copyText(R.copyText(no, r.from, r.to, names, state.cls)).then(function (ok) {
+        toast(ok ? '복사했어요. 한글에 붙여 넣어 ' + (state.cls ? '교과 평가' : '통지표') + ' 작성에 참고하세요.' : '복사하지 못했어요.', ok ? 'success' : 'error');
       });
     });
     box.querySelectorAll('[data-memo]').forEach(function (inp) {

@@ -14,6 +14,7 @@ DN.Backup = (function () {
   const LABELS = {
     settings: '설정', students: '학생', events: '일정', observations: '관찰 기록',
     attendance: '출결 메모', presets: '관찰 상황 버튼', timetables: '시간표', seatings: '자리·모둠 배치', relations: '갈등·동행 관계',
+    classes: '맡은 반(교과전담)', classNames: '맡은 반 명단',
   };
   let rootEl = null;
 
@@ -406,7 +407,7 @@ DN.Backup = (function () {
   // ── 새 학년 시작하기 ──
   // 고른 것만 비운다. 핸드폰과 오가는 기록(관찰·출결·일정·시간표)은 “지움 표시”로 남겨 핸드폰이 옛 기록을 다시 보내도 되살아나지 않게 한다
   const NY_PARTS = [
-    { id: 'students', label: '학생 명단', cols: ['students'], tomb: false },
+    { id: 'students', label: '학생 명단·맡은 반', cols: ['students', 'classes', 'classNames'], tomb: false },
     { id: 'records', label: '관찰·출결 기록', cols: ['observations', 'attendance'], tomb: true },
     { id: 'seating', label: '자리·모둠 배치와 관계', cols: ['seatings', 'relations'], tomb: false },
     { id: 'schedule', label: '학교 일정·시간표', cols: ['events', 'timetables'], tomb: true },
@@ -419,7 +420,7 @@ DN.Backup = (function () {
         const live = DN.Store.getAll(col).filter(function (r) { return !r.deleted; });
         counts[col] = live.length;
         if (!live.length) return;
-        if (p.tomb) DN.Store.batch(col, { update: live.map(function (r) { return { id: r.id, patch: { deleted: true } }; }) });
+        if (p.tomb || col === 'classes') DN.Store.batch(col, { update: live.map(function (r) { return { id: r.id, patch: { deleted: true } }; }) });
         else DN.Store.replaceAll(col, []);
       });
     });
