@@ -87,12 +87,15 @@ DN.Settings = (function () {
   // ── 화면 스타일 (기기마다 따로, 저장 공간 메타 look) ──
   const LOOKS = [
     { id: 'cute', name: '귀여운', desc: '파스텔 알림장', sw: ['#fdfaf5', '#ffe2d3', '#dff0fb', '#dcf3e6'] },
+    { id: 'berry', name: '딸기우유', desc: '분홍빛 말랑말랑', sw: ['#fff5f8', '#ffd6e5', '#ff5c93', '#fff0b8'] },
+    { id: 'lemon', name: '레몬소다', desc: '노랑에 하늘 한 방울', sw: ['#fffdf0', '#fff2a8', '#ffc21a', '#bfe6ff'] },
+    { id: 'grape', name: '포도젤리', desc: '보랏빛 라벤더', sw: ['#faf8ff', '#e9e1ff', '#8b5cf6', '#ffd9ec'] },
     { id: 'sky', name: '맑은 하늘', desc: '흰 바탕에 밝은 파랑', sw: ['#ffffff', '#e8f1ff', '#2f80ed', '#1d2433'] },
     { id: 'mint', name: '민트', desc: '흰 바탕에 청록', sw: ['#ffffff', '#dff7ef', '#0fa37f', '#1c2a27'] },
     { id: 'black', name: '블랙&오렌지', desc: '검정 글씨에 주황 포인트', sw: ['#ffffff', '#f5f5f5', '#111111', '#ff6b2c'] },
     { id: 'navy', name: '네이비', desc: '남색 메뉴에 노랑 포인트', sw: ['#1e3a6e', '#f7f9fc', '#ffffff', '#ffc933'] },
   ];
-  const THEME_COLOR = { cute: '#fff5eb', sky: '#f4f8ff', mint: '#f2fbf8', black: '#ffffff', navy: '#1e3a6e' };
+  const THEME_COLOR = { berry: '#ffe9f1', lemon: '#fff6c9', grape: '#efe9ff', cute: '#fff5eb', sky: '#f4f8ff', mint: '#f2fbf8', black: '#ffffff', navy: '#1e3a6e' };
   // 예전 이름(심플·시크)을 고른 기기는 가까운 새 스타일로
   const OLD = { simple: 'sky', chic: 'black' };
   function look() { const l = OLD[DN.Store.getMeta('look')] || DN.Store.getMeta('look'); return LOOKS.some(function (x) { return x.id === l; }) ? l : 'cute'; }

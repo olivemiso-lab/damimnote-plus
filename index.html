@@ -11,6 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="담임노트+">
   <link rel="stylesheet" href="css/style.css">
+  <script>/* 이 화면을 연 서비스 워커 — 나중에 바뀌었으면 새 버전이 깔린 것 (app.js) */ try { window.dnPageSW = navigator.serviceWorker ? navigator.serviceWorker.controller : null; } catch (e) {}</script>
   <script>try { var dnLook = localStorage.getItem('dn_look'); dnLook = { simple: 'sky', chic: 'black' }[dnLook] || dnLook; if (dnLook && dnLook !== 'cute') document.documentElement.setAttribute('data-look', dnLook); } catch (e) {}</script>
 </head>
 <body>

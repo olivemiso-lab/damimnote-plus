@@ -1062,6 +1062,57 @@ html[data-look="navy"] .nav-btn { color: #d5deef; }
 html[data-look="navy"] .nav-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 html[data-look="navy"] .nav-btn.active { background: #ffc933; color: #1a2440; }
 
+/* 딸기우유 (분홍 바탕 + 진분홍 포인트, 동글동글) */
+html[data-look="berry"] {
+  --canvas: #fff7fa; --paper: #ffffff; --side: #ffe9f1; --soft: #fff1f6;
+  --ink: #3d2a33; --ink-sub: #8a6b78; --line: #fbdfea; --line-strong: #f5c9da;
+  --peach-bg: #ffe0ea; --peach-ink: #c2335f; --peach-mid: #ffc4d7;
+  --sky-bg: #e3f2ff; --sky-ink: #2a6aa8; --sky-mid: #c2e1fb;
+  --mint-bg: #ddf6e9; --mint-ink: #1d7a4c;
+  --lemon-bg: #fff3c2; --lemon-ink: #8a6100; --lemon-mid: #ffe38a;
+  --lilac-bg: #f1e8ff; --lilac-ink: #7a45c0; --pink-bg: #ffe0ea; --pink-ink: #c2335f;
+  --rose-bg: #ffecef; --danger: #e0445b; --brand: #ff4f8b; --radius: 20px; --pill: 999px;
+  --shadow: 0 3px 12px rgba(255, 92, 147, 0.10);
+}
+html[data-look="berry"] .btn-primary { background: #ff5c93; color: #fff; border-color: #ff5c93; }
+html[data-look="berry"] .nav-btn.active { background: #ff5c93; color: #fff; }
+html[data-look="berry"] .nav-btn:hover { background: #ffd6e5; }
+html[data-look="berry"] .brand-title .plus { color: #ffb400; }
+
+/* 레몬소다 (노랑 바탕 + 하늘 포인트) */
+html[data-look="lemon"] {
+  --canvas: #fffdf2; --paper: #ffffff; --side: #fff6c9; --soft: #fffae0;
+  --ink: #33301f; --ink-sub: #7c7556; --line: #f6eec6; --line-strong: #eedf9e;
+  --peach-bg: #fff0b3; --peach-ink: #8a5a00; --peach-mid: #ffe07a;
+  --sky-bg: #dff2ff; --sky-ink: #1767a8; --sky-mid: #b9e1ff;
+  --mint-bg: #dcf6e6; --mint-ink: #1a7a45;
+  --lemon-bg: #fff0b3; --lemon-ink: #8a5a00; --lemon-mid: #ffe07a;
+  --lilac-bg: #efebff; --lilac-ink: #5a3fc0; --pink-bg: #ffe6ee; --pink-ink: #b8325c;
+  --rose-bg: #ffeeee; --danger: #d9362f; --brand: #e89a00; --radius: 20px; --pill: 999px;
+  --shadow: 0 3px 12px rgba(230, 170, 0, 0.12);
+}
+html[data-look="lemon"] .btn-primary { background: #ffc21a; color: #33301f; border-color: #ffc21a; }
+html[data-look="lemon"] .nav-btn.active { background: #ffc21a; color: #33301f; }
+html[data-look="lemon"] .nav-btn:hover { background: #fff0b3; }
+html[data-look="lemon"] .brand-title .plus { color: #2f9be8; }
+
+/* 포도젤리 (라벤더 바탕 + 보라 포인트) */
+html[data-look="grape"] {
+  --canvas: #faf8ff; --paper: #ffffff; --side: #efe9ff; --soft: #f5f1ff;
+  --ink: #2d2640; --ink-sub: #756c8c; --line: #e9e2fb; --line-strong: #d8cdf7;
+  --peach-bg: #ffe3f0; --peach-ink: #b8327a; --peach-mid: #ffc6e1;
+  --sky-bg: #e6edff; --sky-ink: #3b55c4; --sky-mid: #c9d6ff;
+  --mint-bg: #dff6ec; --mint-ink: #1b7a50;
+  --lemon-bg: #fff3cc; --lemon-ink: #876100; --lemon-mid: #ffe18f;
+  --lilac-bg: #ece4ff; --lilac-ink: #6a3fd1; --pink-bg: #ffe3f0; --pink-ink: #b8327a;
+  --rose-bg: #ffecf0; --danger: #d9364f; --brand: #7c4dff; --radius: 20px; --pill: 999px;
+  --shadow: 0 3px 12px rgba(124, 77, 255, 0.10);
+}
+html[data-look="grape"] .btn-primary { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
+html[data-look="grape"] .nav-btn.active { background: #8b5cf6; color: #fff; }
+html[data-look="grape"] .nav-btn:hover { background: #e9e1ff; }
+html[data-look="grape"] .brand-title .plus { color: #ff6fae; }
+
 /* 상황 버튼 무리 색: 참여 하늘 · 관계 초록 · 태도 노랑 */
 html[data-look] .preset-group:nth-child(1) .preset-btn, html[data-look] .m-preset-g:nth-of-type(1) .preset-btn { background: var(--sky-bg); color: var(--sky-ink); border-color: var(--sky-mid); }
 html[data-look] .preset-group:nth-child(2) .preset-btn, html[data-look] .m-preset-g:nth-of-type(2) .preset-btn { border-color: #c9ecd8; }

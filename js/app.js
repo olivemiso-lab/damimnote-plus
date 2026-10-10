@@ -91,8 +91,16 @@ DN.App = (function () {
       try { sessionStorage.setItem('dn_updated', '1'); } catch (e) {}
       location.reload();
     };
+    // 새 버전이 화면을 열자마자(app.js가 듣기 전에) 깔리면 controllerchange를 놓친다.
+    // 그래서 화면을 연 워커(index.html이 적어 둔 dnPageSW)와 지금 워커를 비교해, 다르면 새로 고친다
+    const pageSW = window.dnPageSW || null;
+    const checkSwapped = function () {
+      const now = navigator.serviceWorker.controller;
+      if (pageSW && now && now !== pageSW) reloadWhenIdle();
+    };
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (hadController) reloadWhenIdle();   // 처음 설치 때는 새로 고칠 필요 없음
+      else checkSwapped();
     });
     try {
       if (sessionStorage.getItem('dn_updated') === '1') {
@@ -105,12 +113,15 @@ DN.App = (function () {
       if (reg.waiting) reg.waiting.postMessage('skipWaiting');
       // 핸드폰은 앱을 닫지 않고 다시 여는 일이 많으므로, 화면으로 돌아올 때마다 새 버전을 확인 (1분에 한 번까지)
       let last = Date.now();
+      checkSwapped();
       document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState !== 'visible' || Date.now() - last < 60000) return;
+        if (document.visibilityState !== 'visible') return;
+        checkSwapped();
+        if (Date.now() - last < 60000) return;
         last = Date.now();
-        reg.update().catch(function () {});
+        reg.update().then(checkSwapped, function () {});
       });
-      setInterval(function () { if (document.visibilityState === 'visible') reg.update().catch(function () {}); }, 30 * 60 * 1000);
+      setInterval(function () { if (document.visibilityState === 'visible') reg.update().then(checkSwapped, function () {}); }, 30 * 60 * 1000);
     }).catch(function () { /* 서비스 워커가 없어도 앱은 그대로 동작 */ });
   }
 
