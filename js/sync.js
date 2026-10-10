@@ -54,6 +54,25 @@ DN.Sync = (function () {
     const n = parseInt(r.count, 10);
     return Object.assign(base(r), { name: str(r.name, 20), subject: str(r.subject, 20), count: n >= 1 && n <= 60 ? n : 25, order: typeof r.order === 'number' ? r.order : 0 });
   }
+  // 보상: 점수·보상 목록·숙제 검사
+  const LEVELS = ['student', 'group', 'class'];
+  const intIn = function (n, lo, hi) { return typeof n === 'number' && n % 1 === 0 && n >= lo && n <= hi; };
+  function cleanPoint(r, dev) {
+    if (!baseOk(r) || !DN.Events.isDate(r.date) || LEVELS.indexOf(r.level) < 0 || !intIn(r.target, 0, 99) || !intIn(r.delta, -999, 999) || !r.delta) return null;
+    const o = Object.assign(base(r), { date: r.date, level: r.level, target: r.target, delta: r.delta, label: str(r.label, 40), device: dev || (r.device === 'mobile' ? 'mobile' : 'pc') });
+    if (r.spend === true) o.spend = true;
+    if (r.hw && ID_RE.test(r.hw)) o.hw = r.hw;
+    return o;
+  }
+  function cleanHomework(r, dev) {
+    if (!baseOk(r) || !DN.Events.isDate(r.date) || !str(r.title, 40)) return null;
+    const done = (Array.isArray(r.done) ? r.done : []).filter(function (n, i, a) { return intIn(n, 1, 99) && a.indexOf(n) === i; }).slice(0, 99);
+    return Object.assign(base(r), { date: r.date, title: str(r.title, 40), done: done, reward: r.reward === true, device: dev || (r.device === 'mobile' ? 'mobile' : 'pc') });
+  }
+  function cleanReward(r) {
+    if (!baseOk(r) || LEVELS.indexOf(r.level) < 0 || !str(r.label, 30) || !intIn(r.cost, 1, 999)) return null;
+    return Object.assign(base(r), { level: r.level, label: str(r.label, 30), cost: r.cost, order: typeof r.order === 'number' ? r.order : 0 });
+  }
   function cleanAttendance(r) {
     if (!baseOk(r) || !DN.Events.isDate(r.date) || !(r.studentNo >= 1 && r.studentNo <= 99 && r.studentNo % 1 === 0)) return null;
     if (R.TYPES.indexOf(r.type) < 0 || R.REASONS.indexOf(r.reason) < 0) return null;
@@ -162,6 +181,8 @@ DN.Sync = (function () {
       observations: pick(R.OBS),
       attendance: pick(R.ATT),
       classes: DN.Store.getAll(R.CLS),
+      points: pick(DN.Rewards.PTS),
+      homework: pick(DN.Rewards.HW),
       eventDone: events.filter(function (e) { return !e.deleted; }).map(function (e) { return { id: e.id, done: !!e.done, updatedAt: e.updatedAt }; }),
       // 핸드폰에서 새로 넣은 일정(지운 것 포함) — 회의처럼 갑자기 생긴 일정
       events: events.filter(function (e) { return e.source === 'mobile'; }),
@@ -172,9 +193,9 @@ DN.Sync = (function () {
   // 보낸 기록에 sentAt 표시 (updatedAt은 그대로 → “보내지 않은 기록”에서 빠진다)
   function markSent(obj) {
     const sent = {};
-    obj.data.observations.concat(obj.data.attendance).forEach(function (r) { sent[r.id] = r.updatedAt; });
+    obj.data.observations.concat(obj.data.attendance, obj.data.points || [], obj.data.homework || []).forEach(function (r) { sent[r.id] = r.updatedAt; });
     const map = {};
-    [R.OBS, R.ATT].forEach(function (col) {
+    [R.OBS, R.ATT, DN.Rewards.PTS, DN.Rewards.HW].forEach(function (col) {
       map[col] = DN.Store.getAll(col).map(function (r) {
         return sent[r.id] && sent[r.id] === r.updatedAt ? Object.assign({}, r, { sentAt: r.updatedAt }) : r;
       });
@@ -193,6 +214,11 @@ DN.Sync = (function () {
     const obs = mergeList(DN.Store.getAll(R.OBS), obsIn);
     const att = mergeList(DN.Store.getAll(R.ATT), attIn);
     const cls = mergeList(DN.Store.getAll(R.CLS), clean(d.classes, cleanClass));
+    // 핸드폰이 만든 점수·숙제만 받는다: PC가 직접 만든 기록(보낸 표시 없음)과 id가 같으면 무시 (핸드폰이 PC 기록을 바꾸지 못하게)
+    const ownIds = function (col) { const o = {}; DN.Store.getAll(col).forEach(function (r) { if (!r.sentAt) o[r.id] = true; }); return o; };
+    const ownP = ownIds(DN.Rewards.PTS), ownH = ownIds(DN.Rewards.HW);
+    const pts = mergeList(DN.Store.getAll(DN.Rewards.PTS), clean(d.points, function (r) { return r && !ownP[r.id] ? sentMark(cleanPoint(r, 'mobile')) : null; }));
+    const hw = mergeList(DN.Store.getAll(DN.Rewards.HW), clean(d.homework, function (r) { return r && !ownH[r.id] ? sentMark(cleanHomework(r, 'mobile')) : null; }));
     // 완료 체크: 핸드폰에서 더 나중에 바꾼 것만, 값이 다를 때만
     const events = DN.Store.getAll('events').slice();
     let doneChanged = 0;
@@ -212,7 +238,7 @@ DN.Sync = (function () {
     const ev = mergeList(events, mobileEv);
     const rawCount = (Array.isArray(d.observations) ? d.observations.length : 0) + (Array.isArray(d.attendance) ? d.attendance.length : 0);
     return {
-      obs: obs, att: att, cls: cls, events: ev.list, evAdded: ev.added, evChanged: ev.updated + ev.removed, doneChanged: doneChanged,
+      obs: obs, att: att, cls: cls, pts: pts, hw: hw, events: ev.list, evAdded: ev.added, evChanged: ev.updated + ev.removed, doneChanged: doneChanged,
       invalid: rawCount - obsIn.length - attIn.length,
     };
   }
@@ -220,6 +246,8 @@ DN.Sync = (function () {
     const parts = [];
     if (p.obs.added) parts.push('관찰 ' + p.obs.added + '건 추가');
     if (p.att.added) parts.push('출결 ' + p.att.added + '건 추가');
+    if (p.pts && p.pts.added) parts.push('보상 점수 ' + p.pts.added + '건 추가');
+    if (p.hw && p.hw.added + p.hw.updated) parts.push('숙제 검사 ' + (p.hw.added + p.hw.updated) + '건');
     if (p.obs.updated + p.att.updated) parts.push('고친 기록 ' + (p.obs.updated + p.att.updated) + '건 갱신');
     if (p.obs.removed + p.att.removed) parts.push('지운 기록 ' + (p.obs.removed + p.att.removed) + '건 반영');
     if (p.evAdded) parts.push('핸드폰 일정 ' + p.evAdded + '건 추가');
@@ -235,6 +263,8 @@ DN.Sync = (function () {
     map[R.OBS] = p.obs.list;
     map[R.ATT] = p.att.list;
     map[R.CLS] = p.cls.list;
+    map[DN.Rewards.PTS] = p.pts.list;
+    map[DN.Rewards.HW] = p.hw.list;
     map.events = p.events;
     if (!writeAll(map)) return null;
     DN.Store.setMeta('lastMergeAt', new Date().toISOString());
@@ -251,6 +281,10 @@ DN.Sync = (function () {
       settings: settings,
       presets: DN.Store.getAll(R.PRE),
       classes: DN.Store.getAll(R.CLS),
+      rewards: (DN.Rewards.rewards(), DN.Store.getAll(DN.Rewards.RWD)),
+      points: DN.Store.getAll(DN.Rewards.PTS).map(function (r) { const o = Object.assign({}, r); delete o.sentAt; return o; }),
+      homework: DN.Store.getAll(DN.Rewards.HW).map(function (r) { const o = Object.assign({}, r); delete o.sentAt; return o; }),
+      groupCount: DN.Rewards.groupCount(),
       // 담당자 이름·메모·첨부는 보내지 않는다 (§8.1). 툼스톤도 보내 핸드폰에서 지워지게
       events: DN.Store.getAll('events').map(function (e) {
         return Object.assign({}, e, { owner: '', note: '', attachmentIds: [] });
@@ -268,6 +302,10 @@ DN.Sync = (function () {
     const events = mergeList(DN.Store.getAll('events'), clean(d.events, cleanEvent));
     const timetables = mergeList(DN.Store.getAll(DN.Weekly.COL), clean(d.timetables, cleanTimetable));
     const cls = mergeList(DN.Store.getAll(R.CLS), clean(d.classes, cleanClass));
+    const rewards = clean(d.rewards, cleanReward);
+    const pts = mergeList(DN.Store.getAll(DN.Rewards.PTS), clean(d.points, function (r) { return cleanPoint(r); }));
+    const hw = mergeList(DN.Store.getAll(DN.Rewards.HW), clean(d.homework, function (r) { return cleanHomework(r); }));
+    const groupCount = d.groupCount >= 2 && d.groupCount <= 12 && d.groupCount % 1 === 0 ? d.groupCount : 0;
     const s = d.settings || {};
     const settings = {};
     if (s.role === 'homeroom' || s.role === 'subject') settings.role = s.role;
@@ -275,7 +313,7 @@ DN.Sync = (function () {
     if (s.classNo >= 1 && s.classNo <= 30) settings.classNo = s.classNo;
     if (s.studentCount >= 1 && s.studentCount <= 60) settings.studentCount = s.studentCount;
     if (s.schoolYear >= 2000 && s.schoolYear <= 2100) settings.schoolYear = s.schoolYear;
-    return { presets: presets, cls: cls, events: events, timetables: timetables, settings: settings };
+    return { presets: presets, cls: cls, rewards: rewards, pts: pts, hw: hw, groupCount: groupCount, events: events, timetables: timetables, settings: settings };
   }
   function applyPcReceive(obj) {
     const p = planPcReceive(obj);
@@ -283,7 +321,11 @@ DN.Sync = (function () {
     map[DN.Weekly.COL] = p.timetables.list;
     if (p.presets.length) map[R.PRE] = p.presets;
     map[R.CLS] = p.cls.list;
+    map[DN.Rewards.PTS] = p.pts.list;
+    map[DN.Rewards.HW] = p.hw.list;
+    if (p.rewards.length) { map[DN.Rewards.RWD] = p.rewards; DN.Store.setMeta('rewardsMade', '1'); }
     if (!writeAll(map)) return null;
+    if (p.groupCount) DN.Rewards.setGroupCount(p.groupCount);
     if (Object.keys(p.settings).length) DN.Settings.save(p.settings);
     DN.Store.setMeta('lastReceiveAt', new Date().toISOString());
     return p;

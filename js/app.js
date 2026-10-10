@@ -10,6 +10,7 @@ DN.App = (function () {
     { id: 'students', icon: '👦', label: '학생 관리', mod: function () { return DN.Students; }, homeroom: true },
     { id: 'attend',   icon: '🗓️', label: '출결 메모', mod: function () { return DN.Attend; }, homeroom: true },
     { id: 'observe',  icon: '📝', label: '관찰 기록', mod: function () { return DN.Observe; } },
+    { id: 'rewards',  icon: '🏆', label: '보상',      mod: function () { return DN.Rewards; }, homeroom: true },
     { id: 'seating',  icon: '🪑', label: '자리·모둠', mod: function () { return DN.Seating; }, homeroom: true },
     { id: 'schedule', icon: '📅', label: '학교 일정', mod: function () { return DN.Schedule; } },
     { id: 'sync',     icon: '🔄', label: '핸드폰 연결', mod: function () { return DN.Sync; } },

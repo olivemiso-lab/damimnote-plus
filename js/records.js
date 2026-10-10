@@ -370,7 +370,7 @@ DN.Records = (function () {
 
   // 핸드폰에서 만든 기록 중 PC로 아직 보내지 않은 것 (sentAt 없음, 또는 보낸 뒤 고치거나 지움). 툼스톤도 보내야 하므로 포함
   function unsentRecords() {
-    return [OBS, ATT].reduce(function (all, col) {
+    return [OBS, ATT, 'points', 'homework'].reduce(function (all, col) {
       return all.concat(DN.Store.query(col, function (r) {
         return r.device === 'mobile' && (!r.sentAt || r.updatedAt > r.sentAt);
       }));
