@@ -67,7 +67,9 @@ DN.Sync = (function () {
   function cleanHomework(r, dev) {
     if (!baseOk(r) || !DN.Events.isDate(r.date) || !str(r.title, 40)) return null;
     const done = (Array.isArray(r.done) ? r.done : []).filter(function (n, i, a) { return intIn(n, 1, 99) && a.indexOf(n) === i; }).slice(0, 99);
-    return Object.assign(base(r), { date: r.date, title: str(r.title, 40), done: done, reward: r.reward === true, device: dev || (r.device === 'mobile' ? 'mobile' : 'pc') });
+    const o = Object.assign(base(r), { date: r.date, title: str(r.title, 40), done: done, reward: r.reward === true, device: dev || (r.device === 'mobile' ? 'mobile' : 'pc') });
+    if (r.kind === 'task') o.kind = 'task';
+    return o;
   }
   function cleanReward(r) {
     if (!baseOk(r) || LEVELS.indexOf(r.level) < 0 || !str(r.label, 30) || !intIn(r.cost, 1, 999)) return null;

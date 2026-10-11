@@ -128,15 +128,24 @@ DN.Rewards = (function () {
     return { from: from, to: DN.Events.addDays(from, 6) };
   }
 
-  // ── 숙제 검사 ──
+  // ── 숙제 검사 · 학습 과제 확인 ── (같은 기록, kind: hw 숙제 / task 수업 시간 학습 과제)
+  const KINDS = {
+    hw: { icon: '📚', name: '숙제', check: '숙제 검사', done: '낸', notDone: '안 낸', short: '안 냄', all: '모두 냈어요! 🎉', allShort: '모두 냄', point: '숙제 완료',
+      ph: '예: 수학 익힘 32쪽, 일기, 받아쓰기 연습' },
+    task: { icon: '🎨', name: '학습 과제', check: '학습 과제 확인', done: '마친', notDone: '아직 못 마친', short: '못 마침', all: '모두 마쳤어요! 🎉', allShort: '모두 마침', point: '과제 완료',
+      ph: '예: 미술 그리기 완성, 과학 실험 기록, 독서 기록장, 수학 활동지' },
+  };
+  function kindOf(h) { return h && h.kind === 'task' ? 'task' : 'hw'; }
   function homeworks() {
     return DN.Store.getAll(HW).filter(alive).sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.createdAt < b.createdAt ? 1 : -1); });
   }
   function getHomework(id) { return homeworks().find(function (h) { return h.id === id; }) || null; }
-  function startHomework(date, title, reward) {
+  function startHomework(date, title, reward, kind) {
     const t = String(title || '').trim().slice(0, 40);
     if (!t) return null;
-    return DN.Store.add(HW, { date: date, title: t, done: [], reward: !!reward, device: device() });
+    const rec = { date: date, title: t, done: [], reward: !!reward, device: device() };
+    if (kind === 'task') rec.kind = 'task';
+    return DN.Store.add(HW, rec);
   }
   // 낸 학생 표시/해제. reward면 개인 점수 +1을 같이 주고(해제하면 그 점수도 지움)
   function toggleHomework(id, no) {
@@ -151,7 +160,7 @@ DN.Rewards = (function () {
       if (i >= 0) {
         const ids = points('student').filter(function (p) { return p.hw === id && p.target === no; }).map(function (p) { return p.id; });
         if (ids.length) removePoints(ids);
-      } else give('student', h.date, [no], 1, '숙제 완료 · ' + h.title, { hw: id });
+      } else give('student', h.date, [no], 1, KINDS[kindOf(h)].point + ' · ' + h.title, { hw: id });
     }
     return i < 0;
   }
@@ -164,14 +173,40 @@ DN.Rewards = (function () {
     if (ids.length) removePoints(ids);
     return DN.Store.update(HW, id, { deleted: true });
   }
-  // 기간 안에서 숙제를 안 낸 횟수 { 번호: 횟수 }
-  function missingCounts(from, to) {
+  // 기간 안에서 숙제를 안 낸(kind를 주면 그 종류) 횟수 { 번호: 횟수 }
+  function missingCounts(from, to, kind) {
     const out = {};
     const nos = DN.Records.studentNumbers();
-    homeworks().filter(function (h) { return (!from || h.date >= from) && (!to || h.date <= to); }).forEach(function (h) {
+    const k = kind || 'hw';
+    homeworks().filter(function (h) { return kindOf(h) === k && (!from || h.date >= from) && (!to || h.date <= to); }).forEach(function (h) {
       missing(h, nos).forEach(function (n) { out[n] = (out[n] || 0) + 1; });
     });
     return out;
+  }
+
+  // 번호 판: 아직 안 한 학생만 위에, 마친 학생은 아래에 접어 둔다 (펼쳐서 다시 누르면 취소)
+  let doneOpen = false;
+  function checkGrid(h, nos, names, attr) {
+    const K = KINDS[kindOf(h)], done = h.done || [];
+    const btn = function (n, d) {
+      return '<button class="no-btn hw-no" ' + attr + '="' + n + '" aria-pressed="' + d + '"><b>' + n + '</b>' + (names && names[n] ? '<small>' + esc(names[n]) + '</small>' : '') + '</button>';
+    };
+    const left = nos.filter(function (n) { return done.indexOf(n) < 0; });
+    const fin = nos.filter(function (n) { return done.indexOf(n) >= 0; });
+    return '<div class="hw-wrap">' +
+      (left.length ? '<div class="picker hw-picker">' + left.map(function (n) { return btn(n, false); }).join('') + '</div>' : '<p class="hw-alldone">' + K.all + '</p>') +
+      (fin.length ? '<details class="hw-done"' + (doneOpen ? ' open' : '') + '><summary>✅ ' + K.done + ' 학생 ' + fin.length + '명 <small>펼쳐서 다시 누르면 취소돼요</small></summary>' +
+        '<div class="picker hw-picker">' + fin.map(function (n) { return btn(n, true); }).join('') + '</div></details>' : '') + '</div>';
+  }
+  function bindCheckGrid(box, attr, onToggle) {
+    const wrap = box.querySelector('.hw-wrap');
+    if (!wrap) return;
+    const det = wrap.querySelector('.hw-done');
+    if (det) det.addEventListener('toggle', function () { doneOpen = det.open; });
+    wrap.addEventListener('click', function (e) {
+      const b = e.target.closest('[' + attr + ']');
+      if (b) onToggle(+b.getAttribute(attr));
+    });
   }
 
   // ════════ 그림 ════════
@@ -194,8 +229,8 @@ DN.Rewards = (function () {
 
   // ════════ PC 화면 ════════
   let rootEl = null;
-  const state = { view: 'student', date: today(), selected: new Set(), reason: '', amount: 1, free: '', last: null, hw: null, hwTitle: '' };
-  const VIEWS = [['student', '⭐ 개인'], ['group', '👥 모둠'], ['class', '🌡️ 학급 온도계'], ['hw', '📚 숙제 검사']];
+  const state = { view: 'student', date: today(), selected: new Set(), reason: '', amount: 1, free: '', last: null, hw: null, hwTitle: '', hwKind: 'hw' };
+  const VIEWS = [['student', '⭐ 개인'], ['group', '👥 모둠'], ['class', '🌡️ 학급 온도계'], ['hw', '📚 숙제·과제 확인']];
 
   function render(container) {
     rootEl = container;
@@ -450,55 +485,64 @@ DN.Rewards = (function () {
     const names = DN.Records.nameMap();
     const nos = DN.Records.studentNumbers();
     const reward = DN.Store.getMeta('hwReward') !== '0';
-    const titles = list.map(function (h) { return h.title; }).filter(function (t, i, a) { return a.indexOf(t) === i; }).slice(0, 6);
-    let html = '<div class="card quick"><div class="quick-head"><h2 class="side-title">새 숙제 검사</h2>' +
+    const K = KINDS[state.hwKind];
+    const titles = list.filter(function (h) { return kindOf(h) === state.hwKind; }).map(function (h) { return h.title; })
+      .filter(function (t, i, a) { return a.indexOf(t) === i; }).slice(0, 6);
+    let html = '<div class="card quick"><div class="quick-head"><h2 class="side-title">새로 확인하기</h2>' +
+      '<span class="seg" id="hwKind">' + Object.keys(KINDS).map(function (k) {
+        return '<button type="button" data-k="' + k + '" aria-pressed="' + (state.hwKind === k) + '">' + KINDS[k].icon + ' ' + KINDS[k].name + '</button>';
+      }).join('') + '</span>' +
       '<label class="quick-date">날짜 <input type="date" id="hwDate" value="' + esc(state.date) + '"></label></div>' +
-      '<div class="free-row"><span class="preset-gname">숙제</span><input type="text" id="hwTitle" maxlength="40" placeholder="예: 수학 익힘 32쪽, 일기, 받아쓰기 연습" value="' + esc(state.hwTitle) + '">' +
-      '<button class="btn-primary" id="hwStart">검사 시작</button></div>' +
+      '<div class="free-row"><span class="preset-gname">' + (state.hwKind === 'task' ? '과제' : '숙제') + '</span><input type="text" id="hwTitle" maxlength="40" placeholder="' + K.ph + '" value="' + esc(state.hwTitle) + '">' +
+      '<button class="btn-primary" id="hwStart">확인 시작</button></div>' +
       (titles.length ? '<div class="rw-reasons">' + titles.map(function (t) { return '<button class="rw-reason" data-t="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div>' : '') +
-      '<label class="check-label"><input type="checkbox" id="hwReward"' + (reward ? ' checked' : '') + '> 낸 학생에게 개인 칭찬 점수 +1</label></div>';
+      '<label class="check-label"><input type="checkbox" id="hwReward"' + (reward ? ' checked' : '') + '> ' + K.done + ' 학생에게 개인 칭찬 점수 +1</label></div>';
     if (cur) {
-      const miss = missing(cur, nos);
-      html += '<div class="card"><div class="side-head"><h2 class="side-title">📚 ' + esc(md(cur.date) + ' ' + cur.title) + '</h2>' +
-        '<span class="rw-count">낸 학생 ' + (cur.done || []).length + ' / ' + nos.length + '</span></div>' +
-        '<p class="set-help">숙제를 낸 학생 번호를 누르세요. 다시 누르면 취소돼요.' + (cur.reward ? ' 누를 때마다 칭찬 점수 +1이 함께 쌓여요.' : '') + '</p>' +
-        '<div class="picker hw-picker">' + nos.map(function (n) {
-          const d = (cur.done || []).indexOf(n) >= 0;
-          return '<button class="no-btn hw-no" data-no="' + n + '" aria-pressed="' + d + '"><b>' + n + '</b>' + (names[n] ? '<small>' + esc(names[n]) + '</small>' : '') + '</button>';
-        }).join('') + '</div>' +
-        '<div class="hw-miss"><b>안 낸 학생 ' + miss.length + '명</b> ' + (miss.length ? esc(miss.map(function (n) { return n + '번' + (names[n] ? ' ' + names[n] : ''); }).join(', ')) : '— 모두 냈어요! 🎉') +
+      const miss = missing(cur, nos), CK = KINDS[kindOf(cur)];
+      html += '<div class="card"><div class="side-head"><h2 class="side-title">' + CK.icon + ' ' + esc(md(cur.date) + ' ' + cur.title) + '</h2>' +
+        '<span class="rw-count">' + CK.done + ' 학생 ' + (cur.done || []).length + ' / ' + nos.length + '</span></div>' +
+        '<p class="set-help">' + (kindOf(cur) === 'task' ? '과제를 마친' : '숙제를 낸') + ' 학생 번호를 누르세요. 다시 누르면 취소돼요.' + (cur.reward ? ' 누를 때마다 칭찬 점수 +1이 함께 쌓여요.' : '') + '</p>' +
+        checkGrid(cur, nos, names, 'data-no') +
+        '<div class="hw-miss"><b>' + CK.notDone + ' 학생 ' + miss.length + '명</b> ' + (miss.length ? esc(miss.map(function (n) { return n + '번' + (names[n] ? ' ' + names[n] : ''); }).join(', ')) : '— ' + CK.all) +
         (miss.length ? ' <button class="btn-ghost" id="hwCopy">📋 복사</button>' : '') + '</div>' +
-        '<div class="rw-foot"><button class="btn-ghost" id="hwClose">검사 닫기</button><button class="btn-ghost" id="hwDel">이 검사 지우기</button></div></div>';
+        '<div class="rw-foot"><button class="btn-ghost" id="hwClose">닫기</button><button class="btn-ghost" id="hwDel">이 확인 지우기</button></div></div>';
     }
     const mc = missingCounts(R_month().from, R_month().to);
     const often = Object.keys(mc).map(Number).filter(function (n) { return mc[n] >= 2; }).sort(function (a, b) { return mc[b] - mc[a] || a - b; });
-    html += '<div class="card"><h2 class="side-title">지난 검사</h2>' + (list.length ? '<div class="hw-list">' + list.slice(0, 20).map(function (h) {
-      const miss = missing(h, nos);
-      return '<button class="hw-item" data-hw="' + esc(h.id) + '" aria-pressed="' + (h.id === state.hw) + '"><span>' + md(h.date) + '</span><b>' + esc(h.title) + '</b>' +
-        '<span class="' + (miss.length ? 'neg' : 'pos') + '">' + (miss.length ? '안 냄 ' + miss.length : '모두 냄') + '</span></button>';
-    }).join('') + '</div>' : '<p class="side-empty">아직 숙제 검사 기록이 없어요.</p>') +
+    // 지난 확인: 아직 남은 학생이 있는 것만 보이고, 모두 마친 것은 접어 둔다
+    const item = function (h) {
+      const miss = missing(h, nos), HK = KINDS[kindOf(h)];
+      return '<button class="hw-item" data-hw="' + esc(h.id) + '" aria-pressed="' + (h.id === state.hw) + '"><span>' + md(h.date) + '</span><b>' + HK.icon + ' ' + esc(h.title) + '</b>' +
+        '<span class="' + (miss.length ? 'neg' : 'pos') + '">' + (miss.length ? HK.short + ' ' + miss.length : HK.allShort) + '</span></button>';
+    };
+    const open = list.filter(function (h) { return missing(h, nos).length; });
+    const closed = list.filter(function (h) { return !missing(h, nos).length; });
+    html += '<div class="card"><h2 class="side-title">지난 확인</h2>' + (list.length
+      ? (open.length ? '<div class="hw-list">' + open.slice(0, 20).map(item).join('') + '</div>' : '<p class="side-empty">남은 확인이 없어요. 모두 끝났어요! 🎉</p>') +
+        (closed.length ? '<details class="hw-done"><summary>✅ 다 끝난 확인 ' + closed.length + '개</summary><div class="hw-list">' + closed.slice(0, 30).map(item).join('') + '</div></details>' : '')
+      : '<p class="side-empty">아직 확인한 기록이 없어요.</p>') +
       (often.length ? '<p class="hw-often">이번 달 2번 넘게 안 낸 학생: ' + esc(often.map(function (n) { return n + '번(' + mc[n] + ')'; }).join(', ')) + '</p>' : '') + '</div>';
     body.innerHTML = html;
     body.querySelector('#hwDate').addEventListener('change', function (e) { state.date = e.target.value || today(); });
     const title = body.querySelector('#hwTitle');
     title.addEventListener('input', function () { state.hwTitle = title.value; });
     const start = function () {
-      const h = startHomework(state.date, title.value, body.querySelector('#hwReward').checked);
-      if (!h) { toast('숙제 이름을 써 주세요.', 'info'); title.focus(); return; }
+      const h = startHomework(state.date, title.value, body.querySelector('#hwReward').checked, state.hwKind);
+      if (!h) { toast((state.hwKind === 'task' ? '과제' : '숙제') + ' 이름을 써 주세요.', 'info'); title.focus(); return; }
       state.hw = h.id; state.hwTitle = '';
       render(rootEl);
     };
     body.querySelector('#hwStart').addEventListener('click', start);
+    body.querySelector('#hwKind').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-k]');
+      if (!b || b.dataset.k === state.hwKind) return;
+      state.hwKind = b.dataset.k; state.hwTitle = '';
+      render(rootEl);
+    });
     title.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) start(); });
     body.querySelector('#hwReward').addEventListener('change', function (e) { DN.Store.setMeta('hwReward', e.target.checked ? '1' : '0'); });
     body.querySelectorAll('[data-t]').forEach(function (b) { b.addEventListener('click', function () { title.value = state.hwTitle = b.dataset.t; title.focus(); }); });
-    const pick = body.querySelector('.hw-picker');
-    if (pick) pick.addEventListener('click', function (e) {
-      const b = e.target.closest('[data-no]');
-      if (!b) return;
-      toggleHomework(cur.id, +b.dataset.no);
-      render(rootEl);
-    });
+    if (cur) bindCheckGrid(body, 'data-no', function (no) { toggleHomework(cur.id, no); render(rootEl); });
     const cp = body.querySelector('#hwCopy');
     if (cp) cp.addEventListener('click', function () {
       const miss = missing(cur, nos);
@@ -510,7 +554,7 @@ DN.Rewards = (function () {
     if (cl) cl.addEventListener('click', function () { state.hw = null; render(rootEl); });
     const dl = body.querySelector('#hwDel');
     if (dl) dl.addEventListener('click', function () {
-      if (!confirmAsk('이 숙제 검사를 지울까요? 함께 준 칭찬 점수도 지워져요.')) return;
+      if (!confirmAsk('이 확인 기록을 지울까요? 함께 준 칭찬 점수도 지워져요.')) return;
       removeHomework(cur.id); state.hw = null; render(rootEl);
     });
     body.querySelectorAll('[data-hw]').forEach(function (b) { b.addEventListener('click', function () { state.hw = b.dataset.hw; render(rootEl); }); });
@@ -570,7 +614,7 @@ DN.Rewards = (function () {
     rewards, addReward, updateReward, removeReward, classGoal,
     points, give, spend, balances, earned, classTemp, removePoints, resetGroups,
     groupCount, setGroupCount, groupNames, weekRange,
-    homeworks, getHomework, startHomework, toggleHomework, missing, removeHomework, missingCounts,
+    KINDS, kindOf, checkGrid, bindCheckGrid, homeworks, getHomework, startHomework, toggleHomework, missing, removeHomework, missingCounts,
     thermoSvg, render,
   };
 })();

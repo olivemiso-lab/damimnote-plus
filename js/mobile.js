@@ -616,7 +616,7 @@ DN.Mobile = (function () {
   }
 
   // ── 보상: 개인 칭찬 · 모둠 · 학급 온도계 · 숙제 검사 ──
-  const RW_TABS = [['student', '⭐ 개인'], ['group', '👥 모둠'], ['class', '🌡️ 학급'], ['hw', '📚 숙제']];
+  const RW_TABS = [['student', '⭐ 개인'], ['group', '👥 모둠'], ['class', '🌡️ 학급'], ['hw', '📚 과제']];
   function rwTab() { const v = DN.Store.getMeta('mRwTab'); return RW_TABS.some(function (t) { return t[0] === v; }) ? v : 'student'; }
   function renderRw(body) {
     const W = DN.Rewards, tab = rwTab();
@@ -645,17 +645,19 @@ DN.Mobile = (function () {
       const hw = W.homeworks().filter(function (h) { return h.date === st.date; });
       const cur = hw.find(function (h) { return h.id === st.rwHw; }) || hw[0];
       if (cur) {
-        const nos = R.studentNumbers(), miss = W.missing(cur, nos);
-        html += '<section class="m-card"><h2>📚 ' + esc(cur.title) + ' <small>낸 학생을 누르세요</small></h2>' +
-          '<div class="picker hw-picker">' + nos.map(function (n) {
-            return '<button class="no-btn hw-no" data-hno="' + n + '" aria-pressed="' + ((cur.done || []).indexOf(n) >= 0) + '"><b>' + n + '</b></button>';
-          }).join('') + '</div><p class="hw-miss"><b>안 낸 학생 ' + miss.length + '명</b> ' + (miss.length ? miss.join(', ') + '번' : '— 모두 냈어요! 🎉') + '</p>' +
-          (hw.length > 1 ? '<div class="m-presets">' + hw.map(function (h) { return '<button class="preset-btn" data-hw="' + esc(h.id) + '">' + esc(h.title) + '</button>'; }).join('') + '</div>' : '') + '</section>';
+        const nos = R.studentNumbers(), miss = W.missing(cur, nos), CK = W.KINDS[W.kindOf(cur)];
+        html += '<section class="m-card"><h2>' + CK.icon + ' ' + esc(cur.title) + ' <small>' + CK.done + ' 학생을 누르세요</small></h2>' +
+          W.checkGrid(cur, nos, null, 'data-hno') + '<p class="hw-miss"><b>' + CK.notDone + ' 학생 ' + miss.length + '명</b> ' + (miss.length ? miss.join(', ') + '번' : '— ' + CK.all) + '</p>' +
+          (hw.length > 1 ? '<div class="m-presets">' + hw.map(function (h) { return '<button class="preset-btn" data-hw="' + esc(h.id) + '">' + W.KINDS[W.kindOf(h)].icon + ' ' + esc(h.title) + '</button>'; }).join('') + '</div>' : '') + '</section>';
       }
-      html += '<section class="m-card"><h2>' + (cur ? '＋ 다른 숙제 검사' : '📚 숙제 검사 시작') + '</h2>' +
-        '<input type="text" id="mHwTitle" maxlength="40" placeholder="예: 수학 익힘 32쪽, 일기" class="m-input">' +
-        '<label class="check-label m-check"><input type="checkbox" id="mHwReward"' + (DN.Store.getMeta('hwReward') !== '0' ? ' checked' : '') + '> 낸 학생에게 칭찬 점수 +1</label>' +
-        '<button class="btn-primary m-big" id="mHwStart">검사 시작</button></section>';
+      const nk = st.rwKind === 'task' ? 'task' : 'hw';
+      html += '<section class="m-card"><h2>' + (cur ? '＋ 새로 확인하기' : '✅ 숙제·과제 확인 시작') + '</h2>' +
+        '<div class="m-seg two" id="mHwKind">' + Object.keys(W.KINDS).map(function (k) {
+          return '<button type="button" data-k="' + k + '" aria-pressed="' + (nk === k) + '">' + W.KINDS[k].icon + ' ' + W.KINDS[k].name + '</button>';
+        }).join('') + '</div>' +
+        '<input type="text" id="mHwTitle" maxlength="40" placeholder="' + W.KINDS[nk].ph + '" class="m-input">' +
+        '<label class="check-label m-check"><input type="checkbox" id="mHwReward"' + (DN.Store.getMeta('hwReward') !== '0' ? ' checked' : '') + '> ' + W.KINDS[nk].done + ' 학생에게 칭찬 점수 +1</label>' +
+        '<button class="btn-primary m-big" id="mHwStart">확인 시작</button></section>';
     }
     body.innerHTML = html;
     body.querySelector('#mRwTabs').addEventListener('click', function (e) {
@@ -684,21 +686,22 @@ DN.Mobile = (function () {
         b.addEventListener('click', function () { afterSave(W.PTS, W.give('class', st.date, [0], +b.dataset.ca, ''), '학급 온도 +' + b.dataset.ca + '°'); });
       });
     } else {
-      const pick = body.querySelector('.hw-picker');
       const cur = W.getHomework(st.rwHw) && W.getHomework(st.rwHw).date === st.date ? W.getHomework(st.rwHw) : W.homeworks().filter(function (h) { return h.date === st.date; })[0];
-      if (pick) pick.addEventListener('click', function (e) {
-        const b = e.target.closest('[data-hno]');
-        if (!b) return;
-        W.toggleHomework(cur.id, +b.dataset.hno);
+      if (cur) W.bindCheckGrid(body, 'data-hno', function (no) {
+        W.toggleHomework(cur.id, no);
         render(rootEl);
         if (DN.Cloud) DN.Cloud.soon(true);
       });
       body.querySelectorAll('[data-hw]').forEach(function (b) { b.addEventListener('click', function () { st.rwHw = b.dataset.hw; render(rootEl); }); });
+      body.querySelector('#mHwKind').addEventListener('click', function (e) {
+        const b = e.target.closest('[data-k]');
+        if (b && b.dataset.k !== st.rwKind) { st.rwKind = b.dataset.k; render(rootEl); }
+      });
       body.querySelector('#mHwStart').addEventListener('click', function () {
         const reward = body.querySelector('#mHwReward').checked;
         DN.Store.setMeta('hwReward', reward ? '1' : '0');
-        const h = W.startHomework(st.date, body.querySelector('#mHwTitle').value, reward);
-        if (!h) { toast('숙제 이름을 써 주세요.', 'info'); body.querySelector('#mHwTitle').focus(); return; }
+        const h = W.startHomework(st.date, body.querySelector('#mHwTitle').value, reward, st.rwKind === 'task' ? 'task' : 'hw');
+        if (!h) { toast('이름을 써 주세요.', 'info'); body.querySelector('#mHwTitle').focus(); return; }
         st.rwHw = h.id;
         render(rootEl);
       });
