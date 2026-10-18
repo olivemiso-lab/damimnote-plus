@@ -480,7 +480,7 @@ DN.Sync = (function () {
         : '<ul class="sync-list">' +
             '<li>핸드폰과 PC를 <b>같은 구글 계정</b>으로 한 번씩 연결하면, 핸드폰 기록이 PC로 저절로 들어와요. 파일을 옮길 필요가 없어요.</li>' +
             '<li>기록은 선생님 드라이브의 <b>앱 전용 숨김 폴더</b>에만 저장돼요. 드라이브의 다른 파일은 보지 않아요.</li>' +
-            '<li>학생 이름·담당 교직원 이름·메모·첨부는 <b>올라가지 않아요</b> (번호로만).</li>' +
+            '<li>학생 이름·담당 교직원 이름·일정 메모·첨부는 <b>올라가지 않아요</b> (번호로만). 관찰·출결 메모는 함께 오가니 이름이나 병명은 적지 마세요.</li>' +
           '</ul><button class="btn-primary" id="cloudOn">구글로 연결</button>');
     const on = box.querySelector('#cloudOn');
     if (on) on.addEventListener('click', function () { C.connect().then(renderCloud); });
