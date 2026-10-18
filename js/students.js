@@ -176,6 +176,78 @@ DN.Students = (function () {
     return out;
   }
 
+  // ════════════════════════════════════════════════
+  //  나이스 명단 파일 (학년 · 반 · 번호 · 성명 [· 성별])
+  //  파일 위쪽 제목 줄은 건너뛰고 머리글 줄부터 읽는다. 여러 반이 섞여 있으면 반을 고른다
+  // ════════════════════════════════════════════════
+  const NEIS_HEAD = { grade: /^학년$/, cls: /^반$/, number: /^(번호|번)$/, name: /^(성명|이름|학생명|학생 이름)$/, gender: /^성별$/ };
+  function rosterFromRows(rows, wantCls) {
+    const norm = function (v) { return String(v || '').replace(/\s+/g, ' ').trim(); };
+    let h = -1, map = {};
+    for (let i = 0; i < Math.min(rows.length, 30) && h < 0; i++) {
+      const m = {};
+      rows[i].forEach(function (c, j) {
+        const t = norm(c);
+        Object.keys(NEIS_HEAD).forEach(function (k) { if (m[k] === undefined && NEIS_HEAD[k].test(t)) m[k] = j; });
+      });
+      if (m.number !== undefined && m.name !== undefined) { h = i; map = m; }
+    }
+    if (h < 0) return { error: '“번호”와 “성명(이름)” 머리글이 있는 줄을 찾지 못했어요. 나이스에서 받은 명단 파일인지 확인해 주세요.' };
+    const cell = function (r, k) { return map[k] === undefined ? '' : norm(r[map[k]]); };
+    const toNo = function (v) { const n = parseInt(v, 10); return n >= 1 && n <= 99 ? n : 0; };
+    let list = rows.slice(h + 1).map(function (r) {
+      return { grade: toNo(cell(r, 'grade')), cls: toNo(cell(r, 'cls')), number: toNo(cell(r, 'number')), name: cell(r, 'name'), gender: cell(r, 'gender') };
+    }).filter(function (s) { return s.name && s.number && s.name.length <= 20; });
+    const key = function (s) { return (s.grade ? s.grade + '학년 ' : '') + (s.cls ? s.cls + '반' : ''); };
+    const groups = list.map(key).filter(function (k, i, a) { return k && a.indexOf(k) === i; });
+    if (groups.length > 1) {
+      if (!wantCls) return { choose: groups };
+      list = list.filter(function (s) { return key(s) === wantCls; });
+    }
+    if (!list.length) return { error: '명단에서 학생을 찾지 못했어요.' };
+    return {
+      list: list,
+      grade: list[0].grade, cls: list[0].cls,
+      text: ['번호\t이름\t성별'].concat(list.map(function (s) { return s.number + '\t' + s.name + '\t' + s.gender; })).join('\n'),
+    };
+  }
+  let pendingClass = null;   // 나이스 파일의 학년·반 → 명단을 추가할 때 설정에도 맞춘다
+  function loadNeisFile(file) {
+    const box = rootEl.querySelector('#bulkBox');
+    box.style.display = 'block';
+    DN.Sheet.read(file).then(function (rows) {
+      const apply = function (res) {
+        const choose = rootEl.querySelector('#neisChoose');
+        choose.innerHTML = '';
+        if (res.error) { toast(res.error, 'error'); return; }
+        if (res.choose) {
+          choose.innerHTML = '<p class="bulk-help">파일에 여러 반이 있어요. 우리 반을 골라 주세요.</p><div class="rw-reasons">' + res.choose.map(function (g) {
+            return '<button class="rw-reason" data-g="' + esc(g) + '">' + esc(g) + '</button>';
+          }).join('') + '</div>';
+          choose.querySelectorAll('[data-g]').forEach(function (b) {
+            b.addEventListener('click', function () { apply(rosterFromRows(rows, b.dataset.g)); });
+          });
+          return;
+        }
+        const ta = rootEl.querySelector('#bulkInput');
+        ta.value = res.text;
+        pendingClass = res.grade || res.cls ? { grade: res.grade, classNo: res.cls } : null;
+        const reset = rootEl.querySelector('#bulkReset');
+        if (reset && DN.Store.count('students')) reset.checked = true;   // 새 명단이면 보통 바꾸기
+        updateBulkPreview();
+        toast((res.grade ? res.grade + '학년 ' : '') + (res.cls ? res.cls + '반 ' : '') + res.list.length + '명을 읽었어요. 미리보기를 확인하고 [명단 한 번에 추가]를 누르세요.', 'success');
+      };
+      const s = DN.Settings.get();
+      const res = rosterFromRows(rows);
+      if (res.choose) {
+        const mine = s.grade + '학년 ' + s.classNo + '반';
+        apply(res.choose.indexOf(mine) >= 0 ? rosterFromRows(rows, mine) : res);
+      } else apply(res);
+    }, function (e) {
+      toast((e && e.message) || '파일을 읽지 못했어요. 엑셀에서 열어 표를 복사해 붙여 넣어 주세요.', 'error');
+    });
+  }
+
   // ── 진입점: 화면 렌더 ──
   function render(container) {
     rootEl = container;
@@ -199,8 +271,11 @@ DN.Students = (function () {
             <div class="search-row">
               <input type="text" id="stuSearch" placeholder="🔍 이름·번호 검색" value="${esc(searchTerm)}">
               <button class="btn-ghost" id="bulkBtn">⚡ 일괄</button>
+              <label class="btn-ghost neis-btn" title="나이스에서 내려받은 학생 명단 엑셀 파일 올리기">📂 나이스 명단<input type="file" id="neisFile" accept=".xlsx,.xls,.csv,.htm,.html" hidden></label>
             </div>
             <div id="bulkBox" class="bulk-box" style="display:none;">
+              <p class="bulk-help">📂 <b>나이스 명단 파일</b>(학년·반·번호·성명)을 올리면 아래 칸이 저절로 채워져요. 파일은 이 브라우저 안에서만 읽어요.</p>
+              <div id="neisChoose"></div>
               <p class="bulk-help">엑셀·한글 표에서 <b>번호·이름·성별</b> 칸을 드래그해 복사한 뒤 붙여넣으세요. 이름만 입력해도 됩니다.</p>
               <textarea id="bulkInput" rows="5" placeholder="번호&#9;이름&#9;성별&#10;1&#9;김민준&#9;남&#10;2&#9;이서연&#9;여&#10;&#10;— 또는 이름만 —  김민준, 이서연, 박도윤"></textarea>
               <div id="bulkPreview" class="bulk-preview" style="display:none;"></div>
@@ -229,6 +304,11 @@ DN.Students = (function () {
     container.querySelector('#bulkInput').addEventListener('input', updateBulkPreview);
     container.querySelector('#bulkReset').addEventListener('change', updateBulkPreview);
     container.querySelector('#bulkAddBtn').addEventListener('click', addBulk);
+    container.querySelector('#neisFile').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (f) loadNeisFile(f);
+    });
   }
 
   // ── 입력 폼 ──
@@ -388,6 +468,7 @@ DN.Students = (function () {
     const ta = rootEl.querySelector('#bulkInput');
     const parsed = parseBulk(ta.value);
     if (!parsed.length) { toast('명단을 입력해주세요.', 'error'); return; }
+    const freshList = !DN.Store.count('students') || !!(rootEl.querySelector('#bulkReset') || {}).checked;
 
     // 새 학기: 기존 학생 전체 삭제 후 등록
     const resetBox = rootEl.querySelector('#bulkReset');
@@ -459,6 +540,15 @@ DN.Students = (function () {
     renderList();
     DN.App.refreshBanner(); // 첫 명단 등록 시 백업 알림 표시
 
+    // 나이스 파일에서 읽은 학년·반·학생 수를 설정에도 맞춘다
+    if (pendingClass && added) {
+      // 새 명단이면 나이스 명단의 마지막 번호가 곧 학생 수
+      const patch = { studentCount: freshList ? Math.min(60, maxNo) : Math.max(DN.Settings.get().studentCount || 0, maxNo) };
+      if (pendingClass.grade >= 1 && pendingClass.grade <= 6) patch.grade = pendingClass.grade;
+      if (pendingClass.classNo >= 1) patch.classNo = pendingClass.classNo;
+      DN.Settings.save(patch);
+    }
+    pendingClass = null;
     let msg = `${added}명 추가 완료!`;
     if (dup) msg += ` (중복 ${dup}명 제외)`;
     if (skipped) msg += ` (형식 오류 ${skipped}명 제외)`;
@@ -562,5 +652,5 @@ DN.Students = (function () {
       .concat([s.vision || '', s.height || '', CARE_T[s.care] || '', s.note || '']);
   }
 
-  return { render, csvColumns, csvRow, ACADEMIC, TRAITS, LEVEL_T };
+  return { render, csvColumns, csvRow, ACADEMIC, TRAITS, LEVEL_T, parseBulk, rosterFromRows };
 })();

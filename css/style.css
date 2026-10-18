@@ -1272,3 +1272,4 @@ html[data-look] .preset-group:nth-child(2) .preset-btn, html[data-look] .m-prese
 .hw-done > summary small { font-weight: 600; color: var(--ink-sub); margin-left: 6px; font-size: 12px; }
 .hw-done .picker, .hw-done .hw-list { margin-top: 8px; }
 .hw-alldone { padding: 14px; text-align: center; font-weight: 900; color: var(--mint-ink); background: var(--mint-bg); border-radius: 14px; }
+.neis-btn { cursor: pointer; white-space: nowrap; }
