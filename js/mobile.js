@@ -130,6 +130,7 @@ DN.Mobile = (function () {
     else if (st.view === 'att') renderAtt(body);
     else if (st.view === 'ev') renderEv(body);
     else if (st.view === 'rw') renderRw(body);
+    else if (st.view === 'lg') renderLg(body);
     else renderHome(body);
 
     root.querySelector('#mDate').addEventListener('change', function (e) {
@@ -144,6 +145,7 @@ DN.Mobile = (function () {
   }
 
   function go(view) {
+    if (view !== 'lg') stopRecording(true);
     st.view = view;
     st.selected.clear();
     st.memo = ''; st.memoOpen = false;
@@ -325,10 +327,11 @@ DN.Mobile = (function () {
     const d = st.date;
     const n = E.onDate(myGradeEvents(), d).filter(function (e) { return !(e.done && E.isTask(e)); }).length;
     body.innerHTML = homeInstallCard() +
-      '<div class="m-actions home' + (DN.Settings.isSubject() ? '' : ' four') + '">' +
+      '<div class="m-actions home' + (DN.Settings.isSubject() ? '' : ' five') + '">' +
         '<button class="m-action obs" id="mGoObs"><span>📝</span>관찰 기록</button>' +
         (DN.Settings.isSubject() ? '' : '<button class="m-action att" id="mGoAtt"><span>🗓️</span>출결</button>') +
         (DN.Settings.isSubject() ? '' : '<button class="m-action rw" id="mGoRw"><span>🏆</span>보상</button>') +
+        (DN.Settings.isSubject() ? '' : '<button class="m-action mlog" id="mGoLg"><span>📎</span>상세 기록 <small>사진·녹음·영상</small></button>') +
         '<button class="m-action ev" id="mGoEv"><span>📌</span><b>일정' + (n ? '<i class="m-badge">' + n + '</i>' : '') + '</b></button></div>' +
       homeIllust();
     bindInstall(body);
@@ -337,6 +340,8 @@ DN.Mobile = (function () {
     if (att) att.addEventListener('click', function () { go('att'); });
     const rw = body.querySelector('#mGoRw');
     if (rw) rw.addEventListener('click', function () { go('rw'); });
+    const lg = body.querySelector('#mGoLg');
+    if (lg) lg.addEventListener('click', function () { go('lg'); });
     body.querySelector('#mGoEv').addEventListener('click', function () { go('ev'); });
   }
 
@@ -707,6 +712,135 @@ DN.Mobile = (function () {
       });
     }
   }
+
+  // ── 📎 상세 기록: 사진·동영상 찍기, 녹음, 앨범 → 핸드폰에 저장, PC로는 옮기기 파일(ZIP) ──
+  const lgDraft = { files: [], cat: '', text: '', busy: false };
+  let recorder = null, recTimer = null, recStart = 0;
+  function stopRecording(keep) {
+    if (!recorder) return;
+    recorder.keep = keep;
+    try { recorder.stop(); } catch (e) {}
+  }
+  function startRecording() {
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)) {
+      toast('이 브라우저에서는 녹음을 할 수 없어요. 핸드폰 녹음 앱으로 녹음한 뒤 [앨범·파일]로 붙여 주세요.', 'error'); return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      const chunks = [];
+      recorder = new MediaRecorder(stream);
+      recorder.keep = true;
+      recorder.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      recorder.onstop = function () {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        clearInterval(recTimer);
+        const type = recorder.mimeType || 'audio/webm';
+        if (recorder.keep && chunks.length) {
+          const d = new Date();
+          const name = '녹음_' + DN.Events.toStr(d) + '_' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0') + (/mp4|m4a|aac/.test(type) ? '.m4a' : '.webm');
+          lgDraft.files.push(new File(chunks, name, { type: type.split(';')[0] }));
+          toast('녹음을 붙였어요.', 'success');
+        }
+        recorder = null;
+        if (st.view === 'lg') render(rootEl);
+      };
+      recorder.start(1000);
+      recStart = Date.now();
+      render(rootEl);
+      recTimer = setInterval(function () {
+        const el = document.getElementById('mRecTime');
+        if (el) { const s = Math.floor((Date.now() - recStart) / 1000); el.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+      }, 500);
+    }, function () {
+      toast('마이크를 쓸 수 없어요. 핸드폰 설정에서 이 앱(크롬)의 마이크 권한을 허용해 주세요.', 'error');
+    });
+  }
+  function renderLg(body) {
+    const L = DN.Logs;
+    const open = L.logs({ archived: false }), arch = L.logs({ archived: true });
+    const todo = L.unexported();
+    const chip = function (f, i) {
+      return '<span class="lg-chip">' + L.KIND[L.kindOf(f.type)].split(' ')[0] + ' ' + esc(f.name) + ' <small>' + DN.Files.formatBytes(f.size) + '</small> <button class="ic" data-rmf="' + i + '" aria-label="빼기">✕</button></span>';
+    };
+    const item = function (r) {
+      const n = (r.attachments || []).length;
+      return '<button class="m-lg-item" data-id="' + esc(r.id) + '"><span class="lg-when">' + esc(L.whenText(r.happenedAt)) + '</span> <span class="lg-cat">' + esc(r.cat) + '</span>' +
+        '<span class="m-lg-who">' + esc(L.whoText(r.nos)) + (n ? ' · 📎' + n : '') + '</span><span class="m-lg-text">' + esc((r.text || '').slice(0, 50)) + '</span></button>';
+    };
+    body.innerHTML = '<section class="m-card"><h2>① 증거 남기기 <small>여러 개 붙여도 돼요</small></h2><div class="m-caps">' +
+        '<label class="m-cap">📷<b>사진 찍기</b><input type="file" accept="image/*" capture="environment" data-cap hidden></label>' +
+        '<label class="m-cap">🎬<b>동영상 찍기</b><input type="file" accept="video/*" capture="environment" data-cap hidden></label>' +
+        (recorder ? '<button class="m-cap rec" id="mRec">⏺️<b>녹음 끝내기 <span id="mRecTime">0:00</span></b></button>'
+          : '<button class="m-cap" id="mRec">🎙️<b>녹음하기</b></button>') +
+        '<label class="m-cap">🖼️<b>앨범·파일</b><input type="file" accept="image/*,video/*,audio/*,.pdf" multiple data-cap hidden></label></div>' +
+        '<div class="m-lg-files">' + (lgDraft.files.length ? lgDraft.files.map(chip).join(' ') : '<span class="set-help">사진·영상·녹음 없이 글만 남겨도 돼요.</span>') + '</div></section>' +
+      '<section class="m-card"><h2>② 관련 학생 <small>없으면 반 전체</small></h2><div id="mPicker"></div></section>' +
+      '<section class="m-card"><h2>③ 분류와 내용</h2><div class="m-presets" id="mLgCats">' + L.CATS.map(function (c) {
+        return '<button class="preset-btn" data-c="' + esc(c) + '" aria-pressed="' + (lgDraft.cat === c) + '">' + esc(c) + '</button>';
+      }).join('') + '</div><textarea id="mLgText" rows="4" maxlength="4000" placeholder="본 그대로 적어 주세요. 학생이 한 말은 따옴표로.">' + esc(lgDraft.text) + '</textarea>' +
+      '<button class="btn-primary m-big" id="mLgSave"' + (lgDraft.busy || recorder ? ' disabled' : '') + '>' + (lgDraft.busy ? '저장하는 중…' : '저장') + '</button>' +
+      '<p class="set-help">기록과 파일은 이 핸드폰에 저장되고 구글 드라이브로 보내지 않아요. 처음 기록한 시각과 파일 지문이 함께 남아요.</p></section>' +
+      '<section class="m-card"><h2>📦 PC로 옮기기</h2><p class="set-help" style="margin-top:0">' +
+        (todo.length ? 'PC로 아직 안 옮긴 기록 <b>' + todo.length + '건</b>이 있어요. 옮기기 파일을 만들어 카톡 “나에게 보내기” 등으로 PC에 보낸 뒤, PC 📎 상세 기록에서 [📦 핸드폰 기록 가져오기]를 누르세요.' : '모두 옮겼어요.') + '</p>' +
+        (todo.length ? '<button class="btn-secondary m-big" id="mLgExport">📦 옮기기 파일 만들기 (' + todo.length + '건)</button>' : '') + '</section>' +
+      '<section class="m-card"><h2>남긴 기록 <small>' + open.length + '건</small></h2>' + (open.length ? '<div class="m-lg-list">' + open.slice(0, 30).map(item).join('') + '</div>' : '<p class="m-empty">아직 없어요.</p>') +
+        (arch.length ? '<details class="hw-done"><summary>🗄️ 보관한 기록 ' + arch.length + '건</summary><div class="m-lg-list">' + arch.slice(0, 30).map(item).join('') + '</div></details>' : '') + '</section>';
+    bindCommon(body);
+    body.querySelectorAll('[data-cap]').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        Array.prototype.forEach.call(inp.files || [], function (f) {
+          if (f.size > 1024 * 1024 * 1024) { toast('“' + f.name + '”은(는) 1GB가 넘어 붙일 수 없어요.', 'error'); return; }
+          if (f.size > 50 * 1024 * 1024 && !DN.utils.confirmAsk('“' + f.name + '”은(는) ' + DN.Files.formatBytes(f.size) + '로 커요. 핸드폰 저장 공간을 많이 써요. 붙일까요?')) return;
+          lgDraft.files.push(f);
+        });
+        inp.value = '';
+        render(rootEl);
+      });
+    });
+    body.querySelector('#mRec').addEventListener('click', function () { if (recorder) stopRecording(true); else startRecording(); });
+    body.querySelector('.m-lg-files').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-rmf]');
+      if (b) { lgDraft.files.splice(+b.dataset.rmf, 1); render(rootEl); }
+    });
+    body.querySelector('#mLgCats').addEventListener('click', function (e) {
+      const b = e.target.closest('[data-c]');
+      if (!b) return;
+      lgDraft.cat = lgDraft.cat === b.dataset.c ? '' : b.dataset.c;
+      body.querySelectorAll('#mLgCats [data-c]').forEach(function (x) { x.setAttribute('aria-pressed', String(x.dataset.c === lgDraft.cat)); });
+    });
+    body.querySelector('#mLgText').addEventListener('input', function (e) { lgDraft.text = e.target.value; });
+    body.querySelector('#mLgSave').addEventListener('click', function () {
+      if (!lgDraft.cat) { toast('분류를 골라 주세요.', 'info'); return; }
+      const d = new Date();
+      const at = st.date + 'T' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      lgDraft.busy = true;
+      render(rootEl);
+      L.addLog({ happenedAt: at, nos: Array.from(st.selected), cat: lgDraft.cat, text: lgDraft.text }, lgDraft.files).then(function () {
+        toast('상세 기록을 저장했어요.', 'success');
+        lgDraft.files = []; lgDraft.cat = ''; lgDraft.text = ''; st.selected.clear();
+      }, function (e) {
+        toast((e && e.message) || '저장하지 못했어요. 저장 공간을 확인해 주세요.', 'error');
+      }).then(function () { lgDraft.busy = false; render(rootEl); });
+    });
+    const ex = body.querySelector('#mLgExport');
+    if (ex) ex.addEventListener('click', function () {
+      const ids = todo.map(function (r) { return r.id; });
+      ex.disabled = true; ex.textContent = '파일 만드는 중…';
+      L.exportZip(ids).then(function (res) {
+        const name = '담임노트_상세기록_' + today() + '.zip';
+        const file = new File([res.blob], name, { type: 'application/zip' });
+        const done = function () { L.markExported(ids); toast('옮기기 파일을 만들었어요. PC에서 가져오세요.', 'success'); render(rootEl); };
+        if (navigator.canShare && navigator.share && navigator.canShare({ files: [file] })) {
+          return navigator.share({ files: [file], title: name }).then(done, function (e) {
+            if (e && e.name === 'AbortError') { render(rootEl); return; }
+            DN.Backup.download(name, res.blob, 'application/zip'); done();
+          });
+        }
+        DN.Backup.download(name, res.blob, 'application/zip'); done();
+      }, function (e) { toast((e && e.message) || '파일을 만들지 못했어요.', 'error'); render(rootEl); });
+    });
+    body.querySelectorAll('[data-id]').forEach(function (b) { b.addEventListener('click', function () { L.openLog(b.dataset.id); }); });
+  }
+  if (DN.Logs) DN.Logs.setOnChange(function () { if (st.view === 'lg' && rootEl && rootEl.isConnected) render(rootEl); });
 
   // ── 되돌리기 알림 (6초) ──
   function showUndo() {

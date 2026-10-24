@@ -72,6 +72,12 @@ DN.Files = (function () {
     return tx('readwrite', function (s) { return s.put(rec); }).then(function () { return rec.id; });
   }
 
+  // 옮기기 파일에서 가져올 때: 원래 id·이름·만든 시각을 그대로
+  function putAs(meta, blob) {
+    const rec = toRecord(meta, blob);
+    return tx('readwrite', function (s) { return s.put(rec); }).then(function () { return rec.id; });
+  }
+
   function get(id) {
     return tx('readonly', function (s) { return s.get(id); }).then(function (r) { return r || null; });
   }
@@ -148,5 +154,5 @@ DN.Files = (function () {
     return (n / 1024 / 1024).toFixed(1) + 'MB';
   }
 
-  return { put, get, remove, list, totalSize, exportAll, replaceAll, sizeWarning, canPreview, open, formatBytes, WARN_BYTES };
+  return { put, putAs, get, remove, list, totalSize, exportAll, replaceAll, sizeWarning, canPreview, open, formatBytes, WARN_BYTES };
 })();

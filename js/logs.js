@@ -166,7 +166,8 @@ DN.Logs = (function () {
     rootEl = container;
     if (!state.at) state.at = nowLocal();
     const names = DN.Records.nameMap();
-    container.innerHTML = '<div class="page-head"><h1>📎 상세 기록</h1></div>' +
+    container.innerHTML = '<div class="page-head"><h1>📎 상세 기록</h1><span class="pv-spacer"></span>' +
+        '<label class="btn-secondary bk-file" title="핸드폰에서 만든 상세 기록 옮기기 파일(ZIP)을 가져와요">📦 핸드폰 기록 가져오기<input type="file" id="lgImport" accept=".zip,application/zip" hidden></label></div>' +
       '<p class="notice">📌 다툼·욕설·쪽지·정리정돈처럼 나중에 확인이 필요한 일을 사진·음성·동영상과 함께 남겨요. 처음 기록한 시각과 파일 지문이 남고, 고치면 고친 이력이 쌓여요. <b>이 기록은 이 PC에만 있고 구글 드라이브로 보내지 않아요.</b> 사진·동영상까지 남기려면 [💾 백업]에서 <b>파일 포함 백업(ZIP)</b>을 받아 두세요.</p>' +
       '<div class="card quick"><div class="quick-head"><h2 class="side-title">새 기록</h2>' +
         '<label class="quick-date">일어난 때 <input type="datetime-local" id="lgAt" value="' + esc(state.at) + '"></label></div>' +
@@ -216,6 +217,17 @@ DN.Logs = (function () {
       q('#lgFileList').innerHTML = fileListText();
     });
     q('#lgSave').addEventListener('click', save);
+    q('#lgImport').addEventListener('change', function (e) {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      toast('가져오는 중이에요. 파일 지문도 다시 확인해요…', 'info');
+      importZip(f).then(function (res) {
+        toast('핸드폰 상세 기록 ' + res.added + '건 추가, ' + res.updated + '건 갱신 (파일 ' + res.files + '개)' + (res.same ? ', 이미 있던 ' + res.same + '건은 그대로' : '') + '.', 'success');
+        if (res.bad.length) DN.utils.confirmAsk('⚠️ 확인이 필요한 파일: ' + res.bad.join(', ') + String.fromCharCode(10) + '(옮기는 중에 파일이 빠졌거나 바뀌었을 수 있어요. 핸드폰의 원본을 지우지 마세요.)');
+        render(container);
+      }, function (er) { toast((er && er.message) || '가져오지 못했어요.', 'error'); });
+    });
     q('#lgFNo').addEventListener('change', function (e) { state.fNo = e.target.value; render(container); });
     q('#lgFCat').addEventListener('change', function (e) { state.fCat = e.target.value; renderList(); });
     q('#lgQ').addEventListener('input', function (e) { state.q = e.target.value.trim(); renderList(); });
@@ -266,6 +278,80 @@ DN.Logs = (function () {
       : '<p class="side-empty">' + (state.fNo || state.fCat || state.q ? '맞는 기록이 없어요.' : '아직 상세 기록이 없어요.') + '</p>') +
       (arch.length ? '<details class="hw-done"><summary>🗄️ 보관한 기록 ' + arch.length + '건</summary><div class="lg-list">' + arch.map(function (r) { return itemHtml(r, names); }).join('') + '</div></details>' : '');
     box.querySelectorAll('[data-id]').forEach(function (b) { b.addEventListener('click', function () { openLog(b.dataset.id); }); });
+  }
+
+  // 기록이 바뀐 뒤 다시 그리기: PC 목록이 떠 있으면 목록, 아니면 핸드폰 화면이 맡긴 함수
+  let onChange = null;
+  function refresh() {
+    if (rootEl && rootEl.isConnected && rootEl.querySelector('#lgList')) renderList();
+    else if (onChange) onChange();
+  }
+  function setOnChange(fn) { onChange = fn; }
+
+  // ════════ 핸드폰 → PC 옮기기 파일 (ZIP) ════════
+  // logs.json(기록 그대로: id·처음 기록 시각·이력 유지) + files/<첨부 id> 파일들. 드라이브를 거치지 않는다
+  function exportZip(ids) {
+    if (!window.JSZip) return Promise.reject(new Error('파일 묶는 도구를 불러오지 못했어요.'));
+    const list = DN.Store.getAll(COL).filter(function (r) { return alive(r) && (!ids || ids.indexOf(r.id) >= 0); });
+    const zip = new JSZip();
+    zip.file('logs.json', JSON.stringify({ app: 'damimnote-plus', kind: 'dn-logs', version: 1, exportedAt: new Date().toISOString(), logs: list }, null, 1));
+    return list.reduce(function (p, r) {
+      return p.then(function () {
+        return Promise.all((r.attachments || []).map(function (a) {
+          return DN.Files.get(a.id).then(function (f) { if (f) zip.file('files/' + a.id, f.blob); });
+        }));
+      });
+    }, Promise.resolve()).then(function () {
+      return zip.generateAsync({ type: 'blob' });
+    }).then(function (blob) { return { blob: blob, count: list.length }; });
+  }
+  // 가져오기: 없는 기록만 더하고, 이미 있는 기록은 더 나중에 고친 쪽을 남긴다. 파일 지문을 다시 계산해 확인
+  function importZip(file) {
+    if (!window.JSZip) return Promise.reject(new Error('파일 묶는 도구를 불러오지 못했어요.'));
+    return JSZip.loadAsync(file).then(function (zip) {
+      const j = zip.file('logs.json');
+      if (!j) throw new Error('담임노트+ 상세 기록 옮기기 파일이 아니에요.');
+      return j.async('string').then(function (text) {
+        let data;
+        try { data = JSON.parse(text); } catch (e) { throw new Error('옮기기 파일이 깨져 있어요.'); }
+        if (!data || data.kind !== 'dn-logs' || !Array.isArray(data.logs)) throw new Error('담임노트+ 상세 기록 옮기기 파일이 아니에요.');
+        const cur = DN.Store.getAll(COL);
+        const res = { added: 0, updated: 0, same: 0, files: 0, bad: [] };
+        return data.logs.reduce(function (p, r) {
+          return p.then(function () {
+            if (!r || typeof r.id !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(r.happenedAt || '') || CATS.indexOf(r.cat) < 0) return;
+            const i = cur.findIndex(function (x) { return x.id === r.id; });
+            if (i >= 0 && !(r.updatedAt > cur[i].updatedAt)) { res.same++; return; }
+            return Promise.all((r.attachments || []).map(function (a) {
+              const zf = zip.file('files/' + a.id);
+              if (!zf) { res.bad.push(a.name + ' (파일 없음)'); return null; }
+              return zf.async('blob').then(function (b) {
+                const blob = new Blob([b], { type: a.type || '' });
+                return sha256(blob).then(function (h) {
+                  if (a.sha256 && h && h !== a.sha256) res.bad.push(a.name + ' (지문 다름)');
+                  res.files++;
+                  return DN.Files.putAs({ id: a.id, name: a.name, type: a.type, createdAt: a.addedAt }, blob);
+                });
+              });
+            })).then(function () {
+              const rec = Object.assign({}, r, { nos: cleanNos(r.nos), text: String(r.text || '').slice(0, 4000) });
+              if (i >= 0) { cur[i] = rec; res.updated++; } else { cur.push(rec); res.added++; }
+            });
+          });
+        }, Promise.resolve()).then(function () {
+          if (!DN.Store.replaceAll(COL, cur)) throw new Error('저장 공간이 부족해 가져오지 못했어요.');
+          return res;
+        });
+      });
+    });
+  }
+  function unexported() {
+    return logs().filter(function (r) { return !r.exportedAt || r.updatedAt > r.exportedAt; });
+  }
+  function markExported(ids) {
+    const now = new Date().toISOString();
+    const all = DN.Store.getAll(COL).map(function (r) { return ids.indexOf(r.id) >= 0 ? Object.assign({}, r, { exportedAt: now, updatedAt: r.updatedAt }) : r; });
+    return DN.Store.replaceAll(COL, all);
   }
 
   // ── 기록 한 건 ──
@@ -319,20 +405,20 @@ DN.Logs = (function () {
       if (rf) {
         const a = atts.find(function (x) { return x.id === rf.dataset.rmfile; });
         if (!confirmAsk('“' + a.name + '” 파일을 이 기록에서 뺄까요? 파일은 지워지고, 뺐다는 사실과 지문은 고친 이력에 남아요.')) return;
-        removeFile(id, a.id).then(function () { openLog(id); renderList(); });
+        removeFile(id, a.id).then(function () { openLog(id); refresh(); });
       }
       if (t.closest('#lgCopy')) copyText(asText(getLog(id), names)).then(function (ok) { toast(ok ? '복사했어요.' : '복사하지 못했어요.', ok ? 'success' : 'error'); });
       if (t.closest('#lgEdit')) openEdit(id);
       if (t.closest('#lgArch')) {
         const on = !getLog(id).archived;
         if (on && !confirmAsk('이 기록을 보관할까요? 지워지지 않고 목록 아래 “보관한 기록”으로 옮겨져요.')) return;
-        setArchived(id, on); closeModal(); renderList();
+        setArchived(id, on); closeModal(); refresh();
       }
       if (t.closest('#lgDel')) {
         if (!confirmAsk('이 기록을 지울까요? 백업 파일에 없는 기록은 되살릴 수 없어요.')) return;
-        removeLog(id); closeModal(); renderList();
+        removeLog(id); closeModal(); refresh();
       }
-      if (t.closest('[data-close]')) renderList();
+      if (t.closest('[data-close]')) refresh();
     });
     const more = m.querySelector('#lgMore');
     more.addEventListener('change', function () {
@@ -343,7 +429,7 @@ DN.Logs = (function () {
       more.value = '';
       if (!files.length) return;
       toast('파일 지문을 계산하고 저장하는 중이에요…', 'info');
-      addFiles(id, files).then(function () { toast('파일을 더했어요.', 'success'); openLog(id); renderList(); },
+      addFiles(id, files).then(function () { toast('파일을 더했어요.', 'success'); openLog(id); refresh(); },
         function (er) { toast((er && er.message) || '파일을 저장하지 못했어요.', 'error'); });
     });
   }
@@ -371,9 +457,9 @@ DN.Logs = (function () {
     m.querySelector('#leSave').addEventListener('click', function () {
       editLog(id, { happenedAt: m.querySelector('#leAt').value, nos: Array.from(sel), cat: cat, text: m.querySelector('#leText').value });
       toast('고쳤어요. 고치기 전 내용은 이력에 남았어요.', 'success');
-      openLog(id); renderList();
+      openLog(id); refresh();
     });
   }
 
-  return { COL, CATS, sha256, kindOf, logs, getLog, addLog, editLog, addFiles, removeFile, setArchived, removeLog, archiveAll, verify, asText, render };
+  return { COL, CATS, KIND, nowLocal, whenText, whoText, openLog, setOnChange, exportZip, importZip, unexported, markExported, sha256, kindOf, logs, getLog, addLog, editLog, addFiles, removeFile, setArchived, removeLog, archiveAll, verify, asText, render };
 })();
