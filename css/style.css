@@ -1273,3 +1273,36 @@ html[data-look] .preset-group:nth-child(2) .preset-btn, html[data-look] .m-prese
 .hw-done .picker, .hw-done .hw-list { margin-top: 8px; }
 .hw-alldone { padding: 14px; text-align: center; font-weight: 900; color: var(--mint-ink); background: var(--mint-bg); border-radius: 14px; }
 .neis-btn { cursor: pointer; white-space: nowrap; }
+
+/* ── 📎 상세 기록 ── */
+#lgText, #leText { width: 100%; font: inherit; font-size: 14.5px; line-height: 1.6; margin-top: 10px; }
+.lg-files { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.lg-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--soft); border: 1px solid var(--line); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 12.5px; color: var(--ink); margin: 2px 0; }
+.lg-chip small { color: var(--ink-sub); }
+.lg-filter { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
+.lg-filter input[type="search"] { flex: 1; min-width: 140px; }
+.lg-list { display: flex; flex-direction: column; gap: 6px; }
+.lg-item { display: grid; grid-template-columns: 112px 118px 150px 1fr auto; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); font: inherit; font-size: 13.5px; cursor: pointer; }
+.lg-item:hover { border-color: var(--line-strong); background: var(--soft); }
+@media (max-width: 900px) { .lg-item { grid-template-columns: 1fr 1fr; } .lg-text { grid-column: 1 / -1; } }
+.lg-when { font-weight: 800; color: var(--ink-sub); }
+.lg-cat { display: inline-block; font-size: 12px; font-weight: 900; color: var(--lilac-ink); background: var(--lilac-bg); border-radius: 8px; padding: 2px 8px; }
+.lg-who { font-weight: 800; }
+.lg-text { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-meta { font-size: 12.5px; white-space: nowrap; }
+.lg-meta i { font-style: normal; font-size: 11px; color: var(--ink-sub); border: 1px solid var(--line-strong); border-radius: 6px; padding: 0 4px; }
+.lg-head { margin-bottom: 8px; }
+.lg-arch { font-size: 12px; color: var(--ink-sub); border: 1px solid var(--line-strong); border-radius: 6px; padding: 1px 6px; }
+.lg-full { font-size: 15px; line-height: 1.7; white-space: normal; padding: 12px; background: var(--soft); border-radius: 12px; }
+.lg-stamp { font-size: 12.5px; color: var(--ink-sub); margin: 8px 0; }
+.lg-atts { display: flex; flex-direction: column; gap: 10px; }
+.lg-att { display: grid; grid-template-columns: 180px 1fr; gap: 12px; align-items: start; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+@media (max-width: 600px) { .lg-att { grid-template-columns: 1fr; } }
+.lg-prev { min-height: 60px; display: flex; align-items: center; justify-content: center; background: var(--soft); border-radius: 10px; font-size: 13px; color: var(--ink-sub); overflow: hidden; }
+.lg-prev img, .lg-prev video { width: 100%; max-height: 220px; object-fit: contain; display: block; }
+.lg-prev audio { width: 100%; }
+.lg-sha { font-family: ui-monospace, Consolas, monospace; color: var(--ink-sub); }
+.lg-att-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.lg-hist { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.lg-h { font-size: 13px; line-height: 1.6; padding: 8px 10px; border-left: 3px solid var(--line-strong); background: var(--soft); border-radius: 6px; }
+.btn-ghost.danger { color: var(--danger); }

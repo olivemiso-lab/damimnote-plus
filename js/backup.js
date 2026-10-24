@@ -15,7 +15,7 @@ DN.Backup = (function () {
     settings: '설정', students: '학생', events: '일정', observations: '관찰 기록',
     attendance: '출결 메모', presets: '관찰 상황 버튼', timetables: '시간표', seatings: '자리·모둠 배치', relations: '갈등·동행 관계',
     classes: '맡은 반(교과전담)', classNames: '맡은 반 명단',
-    points: '보상 점수', rewards: '보상 목록', homework: '숙제 검사',
+    points: '보상 점수', rewards: '보상 목록', homework: '숙제 검사', logs: '상세 기록',
   };
   let rootEl = null;
 
@@ -425,6 +425,8 @@ DN.Backup = (function () {
         else DN.Store.replaceAll(col, []);
       });
     });
+    // 상세 기록은 지우지 않고 모두 보관한다 (기록 비우기를 골랐을 때)
+    if (parts.indexOf('records') >= 0 && DN.Logs) counts.logs = DN.Logs.archiveAll();
     if (settings) DN.Settings.save(settings);
     DN.Store.setMeta('newYearAt', new Date().toISOString());
     return counts;
